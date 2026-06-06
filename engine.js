@@ -194,12 +194,12 @@
 
   /* ---- Façade publique ---- */
   root.OdyssiaEngine = {
-    _game:null, _cfg:null, _booted:false,
+    _game:null, _cfg:null, _booted:false, _quests:{},
     init(cfg){ this._cfg=cfg||{};
       this._game=new Phaser.Game({
         type:Phaser.CANVAS, parent:(cfg&&cfg.parent)||"engine-canvas", transparent:true, pixelArt:true, roundPixels:true,
         scale:{ mode:Phaser.Scale.FIT, autoCenter:Phaser.Scale.CENTER_BOTH, width:GAME_W, height:GAME_H },
-        scene:[ BootScene, MiniGameScene ],
+        scene:[ BootScene, MiniGameScene ].concat(Object.keys(this._quests).map(k=>this._quests[k].SceneClass)),
       });
       this._game.events.once("ready",()=>{ this._booted=true; });
       return this._game;
@@ -208,6 +208,12 @@
       const start=()=>{ const sm=this._game.scene; if(sm.isActive("MiniGame")) sm.stop("MiniGame"); sm.start("MiniGame",{subject,mode}); };
       if(this._booted) start(); else this._game.events.once("ready",start);
     },
+    registerQuest(id, sceneKey, SceneClass, content){ this._quests[id]={ sceneKey, SceneClass, content };
+      if(this._game){ try{ if(!this._game.scene.getScene(sceneKey)) this._game.scene.add(sceneKey, SceneClass); }catch(e){} } },
+    launchQuest(id){ const q=this._quests[id]; if(!q||!this._game) return; SFX.resume(); SFX.enter();
+      const start=()=>{ const sm=this._game.scene; if(sm.isActive(q.sceneKey)) sm.stop(q.sceneKey); sm.start(q.sceneKey,{id, content:q.content}); };
+      if(this._booted) start(); else this._game.events.once("ready",start); },
+    quit(){ if(!this._game) return; try{ this._game.scene.getScenes(true).forEach(sc=>{ const k=sc.scene.key; if(k!=="Boot") this._game.scene.stop(k); }); }catch(e){} if(this._cfg && this._cfg.onClose) this._cfg.onClose(); },
     setMuted(m){ SFX.setMuted(m); },
   };
 })(window);

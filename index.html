@@ -100,12 +100,23 @@
   .soon{ display:inline-flex; align-items:center; gap:6px; background:var(--gold); color:var(--on-gold); font-family:var(--font-title); font-weight:800; font-size:13px; padding:8px 14px; border-radius:9999px; }
 
   /* ---- Engine overlay (mini-jeux Phaser) ---- */
-  #engine-overlay{ z-index:70; }
-  #engine-canvas{ width:min(460px,94vw); height:min(540px,86vh); }
+  #engine-overlay{ position:fixed; inset:0; z-index:70; display:none; flex-direction:column; background:linear-gradient(180deg,#2e2bc2,#1b1b23); }
+  #engine-overlay.show{ display:flex; }
+  #engine-bar{ flex:0 0 auto; height:54px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 14px; background:var(--surface); box-shadow:var(--shadow-1); z-index:2; }
+  #engine-title{ font-family:var(--font-title); font-weight:800; font-size:16px; color:var(--on-surface); display:flex; align-items:center; gap:8px; min-width:0; }
+  #engine-title .material-symbols-outlined{ color:var(--primary); }
+  #engine-back{ font-family:var(--font-title); font-weight:800; font-size:13px; color:#fff; background:var(--primary); border:none; border-radius:12px; padding:9px 14px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:var(--shadow-1); white-space:nowrap; }
+  #engine-back:active{ transform:translateY(1px); }
+  #engine-canvas{ flex:1 1 auto; min-height:0; width:100%; position:relative; }
   #engine-canvas canvas{ display:block; margin:0 auto; }
 
   #toast{ position:fixed; left:50%; bottom:26px; transform:translateX(-50%); z-index:90; display:none; }
   #toast .inner{ border-radius:9999px; box-shadow:var(--shadow-2); padding:12px 18px; font-family:var(--font-title); font-weight:700; font-size:13px; display:flex; align-items:center; gap:8px; }
+  .frise-step{ align-items:center; }
+  .frise-quest{ flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; font-family:var(--font-title); font-weight:800; font-size:12px; color:#fff; background:var(--c); border:none; border-radius:9999px; padding:7px 12px; cursor:pointer; box-shadow:var(--shadow-1); white-space:nowrap; }
+  .frise-quest:active{ transform:translateY(1px); }
+  .frise-quest .material-symbols-outlined{ font-size:16px; }
+  .frise-quest.done{ background:var(--surface); color:var(--c); border:2px solid var(--c); }
 </style>
 </head>
 <body>
@@ -201,7 +212,13 @@
 </div></div>
 
 <!-- ===== Moteur (mini-jeux) ===== -->
-<div id="engine-overlay" class="overlay"><div id="engine-canvas"></div></div>
+<div id="engine-overlay">
+  <div id="engine-bar">
+    <span id="engine-title"><span class="material-symbols-outlined">sports_esports</span><span id="engine-title-txt">Jeu</span></span>
+    <button id="engine-back" class="btn"><span class="material-symbols-outlined" style="font-size:18px;">arrow_back</span> Retour aux matières</button>
+  </div>
+  <div id="engine-canvas"></div>
+</div>
 
 <!-- ===== Victoire ===== -->
 <div id="victory" class="overlay"><div class="panel" style="max-width:480px; text-align:center;">
@@ -222,5 +239,6 @@
 <script src="content.js"></script>
 <script src="design.js"></script>
 <script src="engine.js"></script>
+<script src="quest-grece.js"></script>
 <script src="ui.js"></script>
 </body></html>

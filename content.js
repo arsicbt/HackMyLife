@@ -15,7 +15,7 @@
 
   const SUBJECTS = {
     maths:    { name:"Tour des étoiles", matiere:"Maths",        color:"#9b51e0", icon:"calculate",    playable:true,  pos:{x:15, y:34} },
-    histgeo:  { name:"Château",          matiere:"Hist-Géo",     color:"#f2994a", icon:"castle",       playable:false, pos:{x:39, y:24} },
+    histgeo:  { name:"Château",          matiere:"Hist-Géo",     color:"#f2994a", icon:"castle",       playable:false, quests:{ "La Grèce antique":"grece" }, pos:{x:39, y:24} },
     svt:      { name:"Forêt",            matiere:"SVT",          color:"#27ae60", icon:"park",         playable:false, pos:{x:64, y:27} },
     pc:       { name:"Labo",             matiere:"Phys-Chimie",  color:"#00b4d8", icon:"science",      playable:false, pos:{x:86, y:37} },
     francais: { name:"Bibliothèque",     matiere:"Français",     color:"#4361ee", icon:"auto_stories", playable:false, pos:{x:29, y:66} },

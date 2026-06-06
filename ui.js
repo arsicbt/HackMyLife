@@ -55,11 +55,13 @@
 
   /* ---------- État / persistance ---------- */
   function freshState(){ return { pseudo:"", classe:"6e A", avatarSeed:0, varkProfile:"visuel", xp:0,
-      done:{visuel:false,auditif:false,lire:false,kinesthesique:false}, scores:{visuel:0,auditif:0,lire:0,kinesthesique:0} }; }
+      done:{visuel:false,auditif:false,lire:false,kinesthesique:false}, scores:{visuel:0,auditif:0,lire:0,kinesthesique:0},
+      quests:{}, questScores:{} }; }
   let state;
   function load(){ let s=null; try{ s=JSON.parse(localStorage.getItem(KEY)); }catch(e){} state = Object.assign(freshState(), s||{});
       state.done=Object.assign({visuel:false,auditif:false,lire:false,kinesthesique:false}, state.done||{});
-      state.scores=Object.assign({visuel:0,auditif:0,lire:0,kinesthesique:0}, state.scores||{}); return s; }
+      state.scores=Object.assign({visuel:0,auditif:0,lire:0,kinesthesique:0}, state.scores||{});
+      state.quests=Object.assign({}, state.quests||{}); state.questScores=Object.assign({}, state.questScores||{}); return s; }
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
   function level(){ return 1+Math.floor(state.xp/XP_PER_LEVEL); }
   function hashString(str){ let h=2166136261>>>0; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
@@ -92,12 +94,12 @@
       ctx.save(); ctx.translate(px-BW/2, py-BH); drawSubjectBuilding(g, key, BW, BH, villageColors(key)); ctx.restore(); });
   }
   function buildHotspots(){ const wrap=$("map-hotspots"); if(!wrap) return; wrap.innerHTML="";
-    Object.keys(SUBJECTS).forEach(key=>{ const s=SUBJECTS[key]; const playable=s.playable;
-      const b=document.createElement("button"); b.className="hotspot"+(playable?" playable":""); b.style.left=s.pos.x+"%"; b.style.top=s.pos.y+"%";
-      const done = playable && MATHS_MODES.every(m=>state.done[m]);
+    Object.keys(SUBJECTS).forEach(key=>{ const s=SUBJECTS[key]; const avail = s.playable || !!s.quests;
+      const b=document.createElement("button"); b.className="hotspot"+(avail?" playable":""); b.style.left=s.pos.x+"%"; b.style.top=s.pos.y+"%";
+      let done=false; if(s.playable) done=MATHS_MODES.every(m=>state.done[m]); else if(s.quests) done=Object.keys(s.quests).every(t=>state.quests[s.quests[t]]);
+      const tag = avail ? (done?' <span class="hs-star">🌟</span>':' <span class="hs-go">▶</span>') : ' <span class="hs-lock material-symbols-outlined">lock</span>';
       b.innerHTML='<span class="hs-pin" style="--c:'+s.color+'"><span class="material-symbols-outlined">'+s.icon+'</span></span>'
-        +'<span class="hs-pill" style="border-color:'+s.color+'">'+s.matiere
-        +(playable?(done?' <span class="hs-star">🌟</span>':' <span class="hs-go">▶</span>'):' <span class="hs-lock material-symbols-outlined">lock</span>')+'</span>';
+        +'<span class="hs-pill" style="border-color:'+s.color+'">'+s.matiere+tag+'</span>';
       b.onclick=()=>{ uiSFX.click(); openSubjectModal(key); };
       wrap.appendChild(b); });
   }
@@ -124,7 +126,10 @@
     $("sm-icon").textContent=s.icon; $("sm-icon").style.color=col;
     const frise=$("frise"); frise.innerHTML="";
     fr.items.forEach((it,i)=>{ const d=document.createElement("div"); d.className="frise-step"; d.style.borderLeftColor=col;
-      d.innerHTML='<div class="n">'+(i+1)+'</div><div><div class="ti">'+it.titre+'</div><div class="de">'+it.desc+'</div></div>'; frise.appendChild(d); });
+      const qid = s.quests && s.quests[it.titre]; let right="";
+      if(qid){ const qd=!!state.quests[qid]; right='<button class="frise-quest'+(qd?" done":"")+'" data-q="'+qid+'" style="--c:'+col+'"><span class="material-symbols-outlined">'+(qd?"replay":"play_arrow")+'</span>'+(qd?"Rejouer":"Jouer")+'</button>'; }
+      d.innerHTML='<div class="n">'+(i+1)+'</div><div style="flex:1;"><div class="ti">'+it.titre+'</div><div class="de">'+it.desc+'</div></div>'+right; frise.appendChild(d); });
+    frise.querySelectorAll(".frise-quest").forEach(b=>{ b.onclick=()=>{ uiSFX.click(); closeSubjectModal(); launchQuest(b.dataset.q); }; });
     if(s.playable){ $("sm-play").style.display="block"; $("sm-soon").style.display="none";
       const grid=$("vark-grid"); grid.innerHTML="";
       MATHS_MODES.forEach(m=>{ const v=VARK[m]; const card=document.createElement("button"); card.className="vark-card"+(m===state.varkProfile?" reco":"");
@@ -133,19 +138,31 @@
           +(state.done[m]?'<span class="done-tag material-symbols-outlined">check_circle</span>':(m===state.varkProfile?'<span class="reco-tag">Conseillé</span>':''));
         card.onclick=()=>{ uiSFX.click(); closeSubjectModal(); launchMode(m); };
         grid.appendChild(card); });
-    } else { $("sm-play").style.display="none"; $("sm-soon").style.display="block"; }
+    } else if(s.quests){ $("sm-play").style.display="none"; $("sm-soon").style.display="block";
+      $("sm-soon").innerHTML='<p style="font-size:13px; color:var(--on-surface-variant); margin:0;"><b style="color:'+col+'">▶ Une quête est disponible !</b> Lance-la depuis la frise ci-dessus. Les autres chapitres arrivent bientôt.</p>';
+    } else { $("sm-play").style.display="none"; $("sm-soon").style.display="block";
+      $("sm-soon").innerHTML='<span class="soon"><span class="material-symbols-outlined" style="font-size:18px;">hourglass_top</span>Bientôt disponible</span><p style="font-size:13px; color:var(--on-surface-variant); margin:12px 0 0;">Cette matière arrive dans une prochaine quête. Pour la démo, mets le cap sur la <b>Tour des étoiles</b> (Maths) !</p>'; }
     $("subject-modal").classList.add("show");
   }
   function closeSubjectModal(){ $("subject-modal").classList.remove("show"); }
 
   /* ---------- Moteur (mini-jeux) ---------- */
-  function showEngine(){ $("engine-overlay").classList.add("show"); const e=window.OdyssiaEngine; if(e&&e._game&&e._game.scale) e._game.scale.refresh(); }
+  function showEngine(title){ const ov=$("engine-overlay"); ov.classList.add("show"); if(title&&$("engine-title-txt")) $("engine-title-txt").textContent=title;
+    const e=window.OdyssiaEngine; if(e&&e._game&&e._game.scale){ e._game.scale.refresh(); setTimeout(()=>{ try{ e._game.scale.refresh(); }catch(_){} },60); } }
   function hideEngine(){ $("engine-overlay").classList.remove("show"); }
-  function launchMode(mode){ uiSFX.enter(); showEngine();
+  function launchMode(mode){ uiSFX.enter(); showEngine("Maths — "+VARK[mode].label);
     requestAnimationFrame(()=>{ window.OdyssiaEngine.launch("maths", mode); if(window.OdyssiaEngine._game&&window.OdyssiaEngine._game.scale) window.OdyssiaEngine._game.scale.refresh(); }); }
+  function launchQuest(qid){ uiSFX.enter(); showEngine("Quête — La Grèce antique");
+    requestAnimationFrame(()=>{ window.OdyssiaEngine.launchQuest(qid); if(window.OdyssiaEngine._game&&window.OdyssiaEngine._game.scale) window.OdyssiaEngine._game.scale.refresh(); }); }
   function awardResult(res){ const prevLevel=level(); const prev=state.scores[res.mode]||0;
     if(res.earnedXp>prev){ state.xp += (res.earnedXp-prev); state.scores[res.mode]=res.earnedXp; }
     if(res.correct>=Math.ceil(res.total/2)) state.done[res.mode]=true; save();
+    const nl=level(); if(nl>prevLevel){ updateAvatars(); toast("⭐ Ton avatar évolue — niveau "+nl+" !", true); }
+    refreshHud();
+  }
+  function awardQuestResult(res){ const prevLevel=level(); const prev=state.questScores[res.quest]||0;
+    if(res.earnedXp>prev){ state.xp += (res.earnedXp-prev); state.questScores[res.quest]=res.earnedXp; }
+    if(res.correct>=Math.ceil(res.total/2)) state.quests[res.quest]=true; save();
     const nl=level(); if(nl>prevLevel){ updateAvatars(); toast("⭐ Ton avatar évolue — niveau "+nl+" !", true); }
     refreshHud();
   }
@@ -222,6 +239,7 @@
     $("onb-pseudo").addEventListener("keydown",e=>{ if(e.key==="Enter") submitOnboarding(); });
     $("sm-close").onclick=()=>{ uiSFX.click(); closeSubjectModal(); };
     $("btn-victory-close").onclick=()=>{ uiSFX.click(); $("victory").classList.remove("show"); };
+    $("engine-back").onclick=()=>{ uiSFX.click(); if(window.OdyssiaEngine&&window.OdyssiaEngine.quit) window.OdyssiaEngine.quit(); else { hideEngine(); refreshHub(); } };
     $("btn-hub-reset").onclick=()=>{ uiSFX.click(); try{ localStorage.removeItem(KEY); }catch(_){} state=freshState(); showOnboarding(); };
     let muted=false; $("btn-sound").onclick=()=>{ muted=!muted; uiSFX.setMuted(muted); if(window.OdyssiaEngine) window.OdyssiaEngine.setMuted(muted);
       $("btn-sound").querySelector("span").textContent=muted?"volume_off":"volume_up"; };
@@ -240,7 +258,7 @@
     // Moteur : initialisé une fois, callbacks branchés sur l'UI
     window.OdyssiaEngine.init({ parent:"engine-canvas",
       onReady(){ /* prêt */ },
-      onFinish(res){ awardResult(res); },
+      onFinish(res){ if(res.quest) awardQuestResult(res); else awardResult(res); },
       onClose(){ hideEngine(); refreshHub(); checkVictory(); } });
     updateAvatars(); showAccueil();
   });
