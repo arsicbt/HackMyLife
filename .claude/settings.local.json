@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "mcp__6277a5bc-b6c1-45c8-9e47-e5538b65dacc__resolve-library-id",
+      "mcp__6277a5bc-b6c1-45c8-9e47-e5538b65dacc__query-docs"
+    ]
+  }
+}

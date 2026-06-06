@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Academia Quest — Édition Phaser</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&amp;family=Space+Grotesk:wght@400;600;700&amp;family=Space+Mono:wght@400;700&amp;family=Material+Symbols+Outlined&amp;display=swap" rel="stylesheet"/>
+<style>
+    :root{ --on-surface:#181a2e; --surface:#fbf8ff; --primary:#1470e8; --secondary:#206d00; --green:#84fe58; --gold:#fcbc05; --error:#ba1a1a; --container:#edecff; --variant:#414754; }
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; height:100%; background:#1b1d2e; font-family:"Plus Jakarta Sans",sans-serif; overscroll-behavior:none; -webkit-user-select:none; user-select:none; }
+    body{ display:flex; flex-direction:column; align-items:center; }
+    .material-symbols-outlined{ font-family:"Material Symbols Outlined"; font-weight:normal; font-style:normal; line-height:1; }
+    .btn{ transition:transform .08s, box-shadow .08s; cursor:pointer; }
+    .btn:active{ transform:translate(4px,4px); box-shadow:none !important; }
+    .mono{ font-family:"Space Mono",monospace; }
+
+    #hud{ width:100%; max-width:760px; height:54px; background:var(--surface); color:var(--on-surface);
+        border-bottom:4px solid var(--on-surface); display:flex; align-items:center; justify-content:space-between; padding:0 10px; gap:8px; flex:0 0 auto; z-index:5; }
+    #hud .left{ display:flex; align-items:center; gap:8px; min-width:0; }
+    #hud .lvl{ font-family:"Space Mono",monospace; font-weight:700; color:var(--primary); font-size:16px; }
+    #xpbar{ width:120px; height:16px; background:#e0e0fc; border:2px solid var(--on-surface); position:relative; }
+    #xpfill{ position:absolute; inset:0 auto 0 0; width:0%; background:var(--secondary); transition:width .4s; }
+    #xpbar .seg{ position:absolute; inset:0; background-image:repeating-linear-gradient(to right,transparent,transparent 14px,var(--on-surface) 14px,var(--on-surface) 16px); opacity:.4; }
+    #hud .xpval, #hud .badges{ font-family:"Space Grotesk",sans-serif; font-weight:600; font-size:12px; color:var(--variant); white-space:nowrap; }
+    .iconbtn{ width:36px; height:36px; background:var(--surface); border:2px solid var(--on-surface); box-shadow:3px 3px 0 0 var(--on-surface);
+        display:flex; align-items:center; justify-content:center; }
+    .iconbtn.green{ background:var(--green); }
+
+    #stage{ position:relative; width:100%; max-width:760px; flex:1 1 auto; min-height:0; background:#1b1d2e; overflow:hidden; }
+    #game{ width:100%; height:100%; }
+    #game canvas{ display:block; }
+
+    #prompt{ position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:6; display:none;
+        background:var(--surface); border:2px solid var(--on-surface); box-shadow:3px 3px 0 0 var(--on-surface);
+        padding:5px 10px; font-family:"Space Grotesk"; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.08em; align-items:center; gap:6px; }
+    #prompt.show{ display:flex; }
+
+    #dialogue{ position:absolute; bottom:12px; left:50%; transform:translateX(-50%); width:94%; max-width:680px; z-index:7; display:none; }
+    #dialogue.show{ display:block; }
+    #dialogue .box{ background:var(--surface); border:8px double var(--on-surface); box-shadow:8px 8px 0 0 var(--on-surface); padding:14px 14px 14px 64px; position:relative; min-height:84px; }
+    #dlg-avatar{ position:absolute; top:-22px; left:-12px; width:54px; height:54px; background:var(--green); border:4px solid var(--on-surface); box-shadow:4px 4px 0 0 var(--on-surface); display:flex; align-items:center; justify-content:center; font-size:30px; }
+    #dlg-name{ font-family:"Space Grotesk"; font-weight:700; color:var(--primary); font-size:17px; margin:0 0 3px; }
+    #dlg-text{ font-family:"Space Mono"; font-size:15px; color:var(--on-surface); margin:0; }
+    #dlg-arrow{ position:absolute; bottom:6px; right:10px; color:var(--primary); animation:blink 1s steps(2) infinite; }
+    @keyframes blink{ 50%{ opacity:.2; } }
+
+    #controls{ position:absolute; inset:auto 0 0 0; z-index:6; display:flex; justify-content:space-between; align-items:flex-end; padding:12px; pointer-events:none; }
+    #dpad{ display:grid; grid-template-columns:repeat(3,42px); grid-template-rows:repeat(3,42px); gap:4px; pointer-events:auto; }
+    #dpad button{ background:var(--surface); border:2px solid var(--on-surface); box-shadow:3px 3px 0 0 var(--on-surface); display:flex; align-items:center; justify-content:center; touch-action:none; cursor:pointer; }
+    #dpad button:active{ transform:translate(2px,2px); box-shadow:none; }
+    #dpad .empty{ visibility:hidden; }
+    #btnA{ pointer-events:auto; width:64px; height:64px; background:var(--primary); color:#fff; border:4px solid var(--on-surface); box-shadow:4px 4px 0 0 var(--on-surface); font-family:"Space Mono"; font-weight:700; font-size:22px; display:flex; flex-direction:column; align-items:center; justify-content:center; touch-action:none; cursor:pointer; }
+    #btnA span{ font-family:"Space Grotesk"; font-size:9px; letter-spacing:.1em; margin-top:-2px; }
+
+    .overlay{ position:fixed; inset:0; z-index:50; background:rgba(24,26,46,.72); display:none; align-items:center; justify-content:center; padding:14px; }
+    .overlay.show{ display:flex; }
+    .panel{ background:var(--surface); border:4px solid var(--on-surface); box-shadow:8px 8px 0 0 var(--on-surface); width:100%; max-width:540px; }
+    .panel .head{ display:flex; align-items:center; gap:10px; padding:14px; border-bottom:4px solid var(--on-surface); }
+    .panel h2{ font-family:"Space Grotesk"; font-size:22px; margin:0; }
+    .panel .sub{ font-family:"Space Grotesk"; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--variant); }
+    #theme-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .theme-card{ display:flex; align-items:center; gap:10px; text-align:left; background:var(--surface); border:2px solid var(--on-surface); box-shadow:4px 4px 0 0 var(--on-surface); padding:12px; cursor:pointer; }
+    .theme-card .emoji{ font-size:30px; } .theme-card .nm{ font-family:"Space Grotesk"; font-weight:700; font-size:14px; line-height:1.1; }
+    .bigbtn{ font-family:"Space Grotesk"; font-weight:700; font-size:16px; letter-spacing:.06em; padding:12px; border:4px solid var(--on-surface); box-shadow:4px 4px 0 0 var(--on-surface); display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; }
+
+    #toast{ position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:60; display:none; }
+    #toast .inner{ border:4px solid var(--on-surface); box-shadow:4px 4px 0 0 var(--on-surface); padding:12px 16px; font-family:"Space Grotesk"; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.08em; display:flex; align-items:center; gap:8px; }
+</style>
+</head>
+<body>
+
+<div id="hud">
+    <div class="left">
+        <span class="lvl">LVL <span id="hud-level">1</span></span>
+        <span class="material-symbols-outlined" style="color:var(--gold);font-size:18px;">bolt</span>
+        <div id="xpbar"><div id="xpfill"></div><div class="seg"></div></div>
+        <span class="xpval"><span id="hud-xp">0</span> XP</span>
+    </div>
+    <div class="left">
+        <span class="badges" id="hud-badges">🏰 0/4</span>
+        <div class="iconbtn green btn" id="btn-world" title="Générer un monde"><span class="material-symbols-outlined" style="font-size:18px;">public</span></div>
+        <div class="iconbtn btn" id="btn-sound-toggle" title="Son"><span class="material-symbols-outlined" style="font-size:18px;">volume_up</span></div>
+        <div class="iconbtn btn" id="btn-help" title="Aide"><span class="material-symbols-outlined" style="font-size:18px;">help</span></div>
+    </div>
+</div>
+
+<div id="stage">
+    <div id="game"></div>
+    <div id="prompt"><span class="material-symbols-outlined" style="font-size:18px;">touch_app</span><span id="prompt-text"></span></div>
+    <div id="dialogue"><div class="box">
+        <div id="dlg-avatar">🧙</div>
+        <h4 id="dlg-name">Professeur Lumen</h4>
+        <p id="dlg-text"></p>
+        <span id="dlg-arrow" class="material-symbols-outlined">arrow_drop_down</span>
+    </div></div>
+    <div id="controls">
+        <div id="dpad">
+            <span class="empty"></span><button data-dir="up"><span class="material-symbols-outlined">keyboard_arrow_up</span></button><span class="empty"></span>
+            <button data-dir="left"><span class="material-symbols-outlined">keyboard_arrow_left</span></button><span class="empty"></span><button data-dir="right"><span class="material-symbols-outlined">keyboard_arrow_right</span></button>
+            <span class="empty"></span><button data-dir="down"><span class="material-symbols-outlined">keyboard_arrow_down</span></button><span class="empty"></span>
+        </div>
+        <div id="btnA" class="btn">A<span>PARLER</span></div>
+    </div>
+</div>
+
+<div id="world-modal" class="overlay"><div class="panel">
+    <div class="head">
+        <span class="material-symbols-outlined" style="color:var(--secondary);font-size:26px;">public</span>
+        <div><h2>Générer un monde</h2><div class="sub">Choisis ton biome</div></div>
+        <div class="iconbtn btn" id="btn-world-close" style="margin-left:auto;"><span class="material-symbols-outlined" style="font-size:18px;">close</span></div>
+    </div>
+    <div style="padding:14px;">
+        <div id="theme-grid"></div>
+        <div style="display:flex; gap:12px; margin-top:14px;">
+            <div id="btn-random" class="bigbtn btn" style="flex:1; background:var(--gold);"><span class="material-symbols-outlined">casino</span> SURPRISE</div>
+            <div id="btn-regen" class="bigbtn btn" style="flex:1; background:var(--surface);"><span class="material-symbols-outlined">refresh</span> REGÉNÉRER</div>
+        </div>
+        <p style="text-align:center; font-family:'Space Grotesk'; font-weight:600; font-size:12px; color:var(--variant); margin-top:12px;">Monde : <b id="cur-world" style="color:var(--on-surface);">—</b> · graine <span id="cur-seed">—</span></p>
+    </div>
+</div></div>
+
+<div id="victory" class="overlay"><div class="panel" style="max-width:480px; text-align:center;">
+    <div style="padding:24px;">
+        <div style="font-size:72px;">🏆</div>
+        <h2 class="mono" style="color:var(--gold); -webkit-text-stroke:1px var(--on-surface); font-size:28px;">EMPIRE CONQUIS !</h2>
+        <p class="mono" style="font-size:15px;">Tu as exploré tout le monde et maîtrisé l'Histoire avec tes quatre sens. Bravo, Stratège !</p>
+        <div style="padding:14px; margin-top:16px; background:#fff; border:4px solid var(--on-surface);">
+            <div class="sub">Score total</div><div class="mono" style="font-size:32px; color:var(--secondary);"><span id="victory-xp">0</span> XP</div>
+        </div>
+        <div id="btn-victory-close" class="bigbtn btn" style="background:var(--primary); color:#fff; margin-top:18px; justify-content:center;"><span class="material-symbols-outlined">explore</span> CONTINUER</div>
+    </div>
+</div></div>
+
+<div id="toast"><div class="inner" id="toast-inner"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+<script>
+"use strict";
+/* ====================================================================== */
+/*  ACADEMIA QUEST — ÉDITION PHASER 3.90 (graphismes enrichis)            */
+/*  + sprites animés, ombres portées, tri en profondeur (y-sort),        */
+/*    eau animée, vignette, particules, effets caméra, audio chiptune.   */
+/* ====================================================================== */
+
+const TILE = 32, MW = 24, MH = 18;
+const GAME_W = 480, GAME_H = 520;
+const KEY = "academia.phaser.v1";
+const hx = h => parseInt(h.replace('#',''),16);
+const DIRS = { up:{x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0} };
+// Tunable constants (skill: avoid magic numbers — keep balance values in one config object)
+const TUNE = { stepMs:150, walkFrameMs:130, fadeIn:450, fadeOut:180, fadeBack:150,
+    dustPerStep:3, sparkBurst:16, confettiBurst:60, maxDust:48, maxSpark:80, maxConfetti:160 };
+
+const THEMES = {
+    plaine:   { name:"Plaine Verdoyante", emoji:"🌳", ground:["#6fbf57","#63b04d","#7ccb63"], path:["#e7d3a1","#d8c089"], water:"#5b8bff", waterHi:"#9fc0ff", wall:"#efe7d4", roof:"#b85c3a", trunk:"#7a4a22", obstacle:["tree"],             decor:"grass",  decorColor:"#4ea63c", density:0.09, waterAmt:5, tint:0xffffff },
+    medieval: { name:"Royaume Médiéval",  emoji:"🏰", ground:["#82a857","#71924a","#8fb45f"], path:["#bdb8ab","#a7a190"], water:"#4f7bd6", waterHi:"#8fb0ee", wall:"#cfc9ba", roof:"#7a8794", trunk:"#6b4622", obstacle:["tree","rock"],      decor:"flower", decorColor:"#3f8b3a", density:0.08, waterAmt:4, tint:0xf3efe0 },
+    jungle:   { name:"Jungle Tropicale",  emoji:"🌴", ground:["#3f9d4e","#33863f","#49ab57"], path:["#caa86a","#b59257"], water:"#2bb6c4", waterHi:"#79e0ea", wall:"#e7dfc7", roof:"#9a6b3a", trunk:"#8a5a2a", obstacle:["palm","tree"],      decor:"grass",  decorColor:"#1f7a33", density:0.16, waterAmt:8, tint:0xdfeede },
+    montagne: { name:"Hauts Sommets",     emoji:"⛰️", ground:["#8fa06f","#7d8e5f","#9aab79"], path:["#a7a097","#928c82"], water:"#6fa8d8", waterHi:"#aacdef", wall:"#cfd2cf", roof:"#5f6b78", trunk:"#6b4a2a", obstacle:["pine","rock","pine"], decor:"snow",   decorColor:"#dfe7ee", density:0.14, waterAmt:4, tint:0xeef2f7 },
+    desert:   { name:"Désert d'Égypte",   emoji:"🏜️", ground:["#e7c873","#dab85f","#efd488"], path:["#efdca0","#e2c98a"], water:"#4fc3d6", waterHi:"#8fe0ea", wall:"#e9dcb0", roof:"#c79a4a", trunk:"#9a6a3a", obstacle:["cactus","rock"],    decor:"dry",    decorColor:"#c9b873", density:0.07, waterAmt:2, tint:0xfff2d6 },
+    volcan:   { name:"Terres Volcaniques",emoji:"🌋", ground:["#5a5258","#4a434a","#665d63"], path:["#6e6066","#5a4e54"], water:"#ff7a3c", waterHi:"#ffc080", wall:"#cabfc0", roof:"#7a4040", trunk:"#3a2a22", obstacle:["rock"],             decor:"rock",   decorColor:"#8a5a3a", density:0.12, waterAmt:5, tint:0xffe0d0 },
+};
+
+const VARK = {
+    visuel:        { letter:"V", label:"Visuel",        accent:"#7c3aed", icon:"visibility", title:"L'Œil de l'Aigle",     maxXP:30 },
+    auditif:       { letter:"A", label:"Auditif",       accent:"#d6256b", icon:"hearing",    title:"L'Écho de l'Histoire", maxXP:30 },
+    lire:          { letter:"R", label:"Lire / Écrire", accent:"#1470e8", icon:"menu_book",  title:"Le Parchemin",         maxXP:30 },
+    kinesthesique: { letter:"K", label:"Kinesthésique", accent:"#206d00", icon:"drag_pan",   title:"La Ligne du Temps",    maxXP:40 },
+};
+
+const SPAWN = { x:13, y:11 }, STATUE = { x:12, y:9 }, NPC = { x:11, y:10 };
+const PLAZA = { x0:10, y0:8, x1:14, y1:11 };
+const B_META = [
+    { game:"visuel",        name:"Galerie du Visuel", qx:[3,7],   qy:[3,4]   },
+    { game:"auditif",       name:"Conservatoire",     qx:[16,20], qy:[3,4]   },
+    { game:"lire",          name:"Bibliothèque",      qx:[3,7],   qy:[12,13] },
+    { game:"kinesthesique", name:"Arène du Temps",    qx:[16,20], qy:[12,13] },
+];
+const NPC_LINES = [
+    "Bienvenue dans le Monde de l'Empereur ! Explore librement avec les flèches.",
+    "Visite les 4 lieux V.A.R.K — un pour chaque sens — et entre par les portes (touche A).",
+    "Le bouton 🌍 en haut génère un nouveau monde : Médiéval, Jungle, Montagne, Désert, Volcan…",
+];
+
+/* ---- Mini-game data ---- */
+const VISUEL_Q = [
+    { emoji:"👑", q:"Quelle scène ce symbole évoque-t-il ?", options:["Le Sacre : Napoléon devient Empereur (1804)","La naissance à Ajaccio","L'exil à Sainte-Hélène","La bataille de Waterloo"], answer:0 },
+    { emoji:"🦅", q:"L'Aigle impériale représente…", options:["La marine anglaise","Les armées et la puissance de l'Empire","Le drapeau corse","Le pape Pie VII"], answer:1 },
+    { emoji:"❄️", q:"Ce symbole glacé renvoie à…", options:["Le siège de Toulon","Le Blocus continental","La campagne de Russie (1812)","Le couronnement de Milan"], answer:2 },
+    { emoji:"⚔️", q:"« Le soleil d'Austerlitz » désigne…", options:["Austerlitz, 1805","Trafalgar, 1805","Waterloo, 1815","Marengo, 1800"], answer:0 },
+];
+const AUDITIF_Q = [
+    { speak:"Je suis né en 1769 sur une île de la Méditerranée rattachée à la France un an plus tôt. Quelle est cette île ?", options:["La Sardaigne","La Corse","La Sicile","Malte"], answer:1 },
+    { speak:"Le 2 décembre 1805 j'ai remporté ma plus célèbre victoire, dite des Trois Empereurs. Laquelle ?", options:["Iéna","Wagram","Austerlitz","Friedland"], answer:2 },
+    { speak:"En 1815, après les Cent-Jours, une défaite en Belgique met fin à mon règne. Quelle bataille ?", options:["Waterloo","Leipzig","Borodino","Eylau"], answer:0 },
+    { speak:"J'ai donné mon nom à un grand recueil de lois civiles de 1804, encore utilisé. Lequel ?", options:["La Déclaration des droits","Le Code civil","Le Concordat","La Constitution de l'an VIII"], answer:1 },
+];
+const LIRE_Q = [
+    { text:"Napoléon est né en ___ à Ajaccio.", options:["1769","1804","1812","1821"], answer:0 },
+    { text:"Il est sacré Empereur le 2 décembre ___.", options:["1799","1804","1805","1815"], answer:1 },
+    { text:"Sa plus célèbre victoire : la bataille d'___ (1805).", options:["Austerlitz","Waterloo","Iéna","Wagram"], answer:0 },
+    { text:"En 1812, la campagne de ___ affaiblit la Grande Armée.", options:["Russie","Prusse","Espagne","Autriche"], answer:0 },
+    { text:"Exilé puis mort sur l'île de ___ en 1821.", options:["Sainte-Hélène","l'île d'Elbe","la Corse","Malte"], answer:0 },
+];
+// Bonus quests (random treasure chests) — short Napoleon trivia
+const QUEST_Q = [
+    { emoji:"📜", q:"En quelle année Napoléon devient-il Premier Consul ?", options:["1799","1789","1804","1810"], answer:0 },
+    { emoji:"🗡️", q:"Quel maréchal était surnommé « le Brave des Braves » ?", options:["Ney","Murat","Davout","Soult"], answer:0 },
+    { emoji:"👑", q:"Qui pose la couronne sur la tête de Napoléon en 1804 ?", options:["Napoléon lui-même","Le pape Pie VII","Joséphine","Talleyrand"], answer:0 },
+    { emoji:"🏛️", q:"Quel monument parisien commémore la Grande Armée ?", options:["L'Arc de Triomphe","La Tour Eiffel","Le Panthéon","L'Opéra"], answer:0 },
+    { emoji:"💍", q:"Comment s'appelle la première épouse de Napoléon ?", options:["Joséphine","Marie-Louise","Désirée","Letizia"], answer:0 },
+    { emoji:"🌊", q:"Sur quelle île Napoléon est-il exilé en 1814 ?", options:["L'île d'Elbe","Sainte-Hélène","La Corse","Malte"], answer:0 },
+    { emoji:"📖", q:"Le Code civil de 1804 est aussi appelé Code…", options:["Napoléon","Civil français","de la République","Impérial"], answer:0 },
+    { emoji:"❄️", q:"Quelle rivière la Grande Armée franchit-elle en retraite en 1812 ?", options:["La Bérézina","Le Danube","Le Rhin","La Volga"], answer:0 },
+];
+const TIMELINE = [
+    { year:1769, label:"Naissance à Ajaccio", emoji:"👶" },
+    { year:1799, label:"Coup d'État du 18 Brumaire", emoji:"🏛️" },
+    { year:1804, label:"Sacre comme Empereur", emoji:"👑" },
+    { year:1805, label:"Victoire d'Austerlitz", emoji:"⚔️" },
+    { year:1812, label:"Campagne de Russie", emoji:"❄️" },
+    { year:1815, label:"Défaite de Waterloo", emoji:"🏳️" },
+    { year:1821, label:"Mort à Sainte-Hélène", emoji:"🪦" },
+];
+
+/* ---- seeded generation ---- */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function generateWorld(themeKey, seed){
+    const rng=mulberry32(seed>>>0), ri=(a,b)=>a+Math.floor(rng()*(b-a+1));
+    const grid=[];
+    for(let y=0;y<MH;y++){ const row=[]; for(let x=0;x<MW;x++){ row.push((x===0||y===0||x===MW-1||y===MH-1)?'T':'G'); } grid.push(row); }
+    const setT=(x,y,c)=>{ if(x>0&&y>0&&x<MW-1&&y<MH-1) grid[y][x]=c; };
+    const buildings=B_META.map(m=>{ const x=ri(m.qx[0],m.qx[1]), y=ri(m.qy[0],m.qy[1]);
+        return { game:m.game, name:m.name, x, y, w:3, h:2, top:(y<MH/2), door:{x:x+1,y:y+1} }; });
+    const footprint=new Set();
+    buildings.forEach(b=>{ for(let dy=0;dy<b.h;dy++) for(let dx=0;dx<b.w;dx++) footprint.add((b.x+dx)+","+(b.y+dy)); });
+    for(let y=PLAZA.y0;y<=PLAZA.y1;y++) for(let x=PLAZA.x0;x<=PLAZA.x1;x++) setT(x,y,'P');
+    for(let x=4;x<=20;x++) setT(x,9,'P');
+    buildings.forEach(b=>{ const ax=b.door.x, ay=b.door.y+1; setT(ax,ay,'P');
+        if(b.top){ for(let y=Math.min(ay,9);y<=Math.max(ay,9);y++) setT(ax,y,'P'); const tx=ax<12?PLAZA.x0:PLAZA.x1; for(let x=Math.min(ax,tx);x<=Math.max(ax,tx);x++) setT(x,9,'P'); }
+        else { const sc=ax<12?Math.min(ax+2,PLAZA.x0):Math.max(ax-2,PLAZA.x1); for(let x=Math.min(ax,sc);x<=Math.max(ax,sc);x++) setT(x,ay,'P'); for(let y=9;y<=ay;y++) setT(sc,y,'P'); const tx=sc<12?PLAZA.x0:PLAZA.x1; for(let x=Math.min(sc,tx);x<=Math.max(sc,tx);x++) setT(x,9,'P'); } });
+    const th=THEMES[themeKey]||THEMES.plaine;
+    const isFree=(x,y)=> grid[y][x]==='G' && !footprint.has(x+","+y) && !(x===SPAWN.x&&y===SPAWN.y) && !(x===STATUE.x&&y===STATUE.y) && !(x===NPC.x&&y===NPC.y);
+    let placed=0,guard=0;
+    while(placed<th.waterAmt&&guard++<300){ const x=ri(1,MW-2),y=ri(1,MH-2); if(!isFree(x,y)) continue; setT(x,y,'W'); if(rng()<0.6&&isFree(x+1,y)) setT(x+1,y,'W'); if(rng()<0.4&&isFree(x,y+1)) setT(x,y+1,'W'); placed++; }
+    for(let y=1;y<MH-1;y++) for(let x=1;x<MW-1;x++){ if(isFree(x,y)&&rng()<th.density) setT(x,y,'T'); }
+    for(let y=1;y<MH-1;y++) for(let x=1;x<MW-1;x++){ if(grid[y][x]==='G'&&!footprint.has(x+","+y)&&rng()<0.10) setT(x,y,'t'); }
+    return { grid, buildings, footprint };
+}
+
+/* ====================================================================== */
+/*  AUDIO — tiny chiptune synth (no assets, Web Audio API)                 */
+/* ====================================================================== */
+const SFX = (function(){
+    let ctx=null, muted=false, lastStep=0;
+    function AC(){ if(!ctx){ try{ ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return ctx; }
+    function note(freq,start,dur,type,vol){ const c=AC(); if(!c||muted) return;
+        const o=c.createOscillator(), g=c.createGain(); o.type=type||"square"; o.frequency.value=freq; o.connect(g); g.connect(c.destination);
+        const t=c.currentTime+start; g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol||0.12,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.start(t); o.stop(t+dur+0.03); }
+    return {
+        resume(){ const c=AC(); if(c&&c.state==="suspended") c.resume(); },
+        toggle(){ muted=!muted; return muted; }, isMuted(){ return muted; },
+        step(){ const now=performance.now(); if(now-lastStep<150) return; lastStep=now; note(150,0,0.05,"square",0.04); },
+        click(){ note(420,0,0.05,"square",0.07); },
+        blip(){ note(330,0,0.04,"square",0.05); },
+        good(){ note(660,0,0.09,"square",0.11); note(990,0.09,0.12,"square",0.11); },
+        bad(){ note(196,0,0.16,"sawtooth",0.11); note(147,0.13,0.2,"sawtooth",0.09); },
+        win(){ [523,659,784,1047,1319].forEach((f,i)=>note(f,i*0.11,0.16,"square",0.12)); },
+        enter(){ note(523,0,0.08,"triangle",0.1); note(784,0.08,0.12,"triangle",0.1); },
+    };
+})();
+
+/* ====================================================================== */
+/*  BOOT SCENE — registry init + procedural texture generation            */
+/* ====================================================================== */
+class BootScene extends Phaser.Scene {
+    constructor(){ super("Boot"); }
+    create(){
+        let s=null; try{ s=JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+        this.registry.set("xp", s&&s.xp || 0);
+        this.registry.set("scores", s&&s.scores || {visuel:0,auditif:0,lire:0,kinesthesique:0});
+        this.registry.set("done", s&&s.done || {visuel:false,auditif:false,lire:false,kinesthesique:false});
+        this.registry.set("world", (s&&s.world&&THEMES[s.world.theme]) ? s.world : {theme:"plaine", seed:1789});
+        this.registry.events.on("changedata", refreshHud); refreshHud();
+        this.makeSoftTextures();
+        this.makeHeroTextures();
+        this.makeVillagerTextures();
+        this.scene.start("World");
+    }
+    // soft radial textures (shadow, particles, vignette)
+    radial(key,size,inner,outer,r0,r1){ const t=this.textures.createCanvas(key,size,size); const c=t.getContext();
+        const g=c.createRadialGradient(size/2,size/2,r0,size/2,size/2,r1); g.addColorStop(0,inner); g.addColorStop(1,outer); c.fillStyle=g; c.fillRect(0,0,size,size); t.refresh(); }
+    makeSoftTextures(){
+        this.radial("shadow",48,"rgba(0,0,0,0.45)","rgba(0,0,0,0)",2,22);
+        this.radial("soft",16,"rgba(255,255,255,1)","rgba(255,255,255,0)",0,8);
+        this.radial("spark",12,"rgba(255,255,255,1)","rgba(255,255,255,0)",0,6);
+        this.radial("vignette",256,"rgba(0,0,0,0)","rgba(0,0,0,0.26)",118,182);
+        const g=this.make.graphics({add:false}); g.fillStyle(0xffffff,1); g.fillRect(0,0,7,7); g.generateTexture("confetti",7,7); g.destroy();
+        const cg=this.make.graphics({add:false}); drawCobbleTex(cg); cg.generateTexture("cobble",TILE,TILE); cg.destroy();
+        const tg=this.make.graphics({add:false}); drawChest(tg); tg.generateTexture("chest",24,22); tg.destroy();
+    }
+    makeHeroTextures(){
+        ["down","up","right"].forEach(dir=>{ for(let step=0;step<2;step++){
+            const g=this.make.graphics({add:false}); drawHero(g,dir,step); g.generateTexture("hero_"+dir+"_"+step,28,36); g.destroy();
+        }});
+    }
+    makeVillagerTextures(){
+        VPAL.forEach((pal,pi)=> ["down","up","right"].forEach(dir=>{ for(let s=0;s<2;s++){
+            const g=this.make.graphics({add:false}); drawVillager(g,dir,s,pal); g.generateTexture("vil"+pi+"_"+dir+"_"+s,24,34); g.destroy();
+        }}));
+    }
+}
+// Wandering-villager palettes (peasant / lady / merchant)
+const VPAL=[
+    { coat:0x8a5a2a, coat2:0x6e4620, hat:0x5a3a18 },
+    { coat:0xa83246, coat2:0x842636, hat:0x6a1f2c },
+    { coat:0x2f6b4f, coat2:0x224f3a, hat:0x183a2a },
+];
+function drawVillager(g,dir,step,pal){
+    const cx=12, lL=step===1?-1:0, lR=step===1?0:-1;
+    g.fillStyle(0x000000,0.18); g.fillEllipse(cx,32,16,6);                                    // baked shadow
+    g.fillStyle(0x2a2a2a,1); g.fillRect(cx-4,27+lL,3,6); g.fillRect(cx+1,27+lR,3,6);          // legs
+    g.fillStyle(pal.coat,1); g.fillRect(cx-6,15,12,13); g.fillStyle(pal.coat2,1); g.fillRect(cx+2,15,4,13); // coat
+    g.fillStyle(0xf1c9a5,1); g.fillRect(cx-4,6,9,10); g.fillStyle(0xe0b28c,1); g.fillRect(cx+2,6,3,10);     // head
+    g.fillStyle(pal.hat,1); g.fillRect(cx-6,4,14,4); g.fillRect(cx-3,1,8,4);                  // hat
+    if(dir==="up"){ g.fillStyle(pal.hat,1); g.fillRect(cx-4,6,9,8); }
+    g.fillStyle(0x181a2e,1);
+    if(dir==="down"){ g.fillRect(cx-2,11,2,2); g.fillRect(cx+2,11,2,2); }
+    else if(dir==="right"){ g.fillRect(cx+2,11,2,2); }
+}
+// Cobblestone road — drawn ONCE into a reusable 32x32 texture (grey stones + green moss),
+// then blitted onto every path tile (skill: reuse textures, avoid huge per-tile geometry).
+function drawCobbleTex(g){
+    g.fillStyle(0x3f4a3a,1); g.fillRect(0,0,TILE,TILE);                                        // mossy mortar
+    g.fillStyle(0x5f8a3a,1); [[3,6],[20,4],[6,21],[26,24],[13,13]].forEach(([x,y])=>g.fillRect(x,y,2,2));
+    const stones=[[8,9,9,8],[23,8,8,7],[8,23,8,8],[23,22,9,8],[16,16,7,6]];
+    stones.forEach(st=>{ const cx=st[0],cy=st[1],w=st[2],h=st[3];
+        g.fillStyle(0x2e352b,1); g.fillEllipse(cx,cy,w+2,h+2);          // dark rim
+        g.fillStyle(0x9a9d95,1); g.fillEllipse(cx,cy,w,h);             // stone
+        g.fillStyle(0x80837b,1); g.fillEllipse(cx+1,cy+2,w-3,h-4);     // bottom shade
+        g.fillStyle(0xc6c8c1,1); g.fillEllipse(cx-1,cy-2,w-4,h-5); });  // top highlight
+    g.fillStyle(0x76ad42,1); [[2,16],[30,14],[16,30]].forEach(([x,y])=>g.fillRect(x,y,2,2)); // moss tufts
+}
+// Treasure chest (random bonus-quest marker)
+function drawChest(g){
+    g.fillStyle(0x000000,0.18); g.fillEllipse(12,21,18,5);          // shadow
+    g.fillStyle(0x6e4620,1); g.fillRect(3,9,18,12);                 // body
+    g.fillStyle(0x8a5a2a,1); g.fillRect(3,9,18,3);
+    g.fillStyle(0x5a3a18,1); g.fillRect(2,4,20,7);                  // lid
+    g.fillStyle(0x7a4a22,1); g.fillRect(2,4,20,2);
+    g.fillStyle(0xfcbc05,1); g.fillRect(3,12,18,2);                 // gold band
+    g.fillStyle(0xfcbc05,1); g.fillRect(10,8,4,6);                  // lock
+    g.fillStyle(0x2a1a0e,1); g.fillRect(11,10,2,2);                 // keyhole
+    g.lineStyle(2,0x2a1a0e,1); g.strokeRect(3,9,18,12);
+}
+function drawHero(g,dir,step){
+    const cx=14; const lL=step===1?-2:0, lR=step===1?0:-2;
+    if(dir==="up"){ g.fillStyle(0xf0b400,1); g.fillRect(cx-6,16,12,12); g.fillStyle(0xcf9a00,1); g.fillRect(cx-6,16,12,3); g.fillStyle(0x9c7400,1); g.fillRect(cx-1,18,2,8); }
+    g.fillStyle(0x16223a,1); g.fillRect(cx-5,28+lL,4,7); g.fillRect(cx+1,28+lR,4,7);          // legs
+    g.fillStyle(0x0a1020,1); g.fillRect(cx-6,34+lL,5,2); g.fillRect(cx+1,34+lR,5,2);          // shoes
+    g.fillStyle(0x1470e8,1); g.fillRect(cx-6,16,12,13);                                       // jacket
+    g.fillStyle(0x0f57b0,1); g.fillRect(cx+2,16,4,13);                                        // shading
+    g.fillStyle(0xf4f4ff,1); g.fillRect(cx-2,16,4,8);                                         // shirt
+    g.fillStyle(0xfcbc05,1); g.fillRect(cx-1,18,2,2); g.fillRect(cx-1,22,2,2);                // buttons
+    g.fillStyle(0x1059bf,1);
+    if(dir==="down"||dir==="up"){ g.fillRect(cx-8,17,2,9); g.fillRect(cx+6,17,2,9); } else { g.fillRect(cx-1,18,3,8); }
+    g.fillStyle(0xf1c9a5,1); g.fillRect(cx-5,6,10,11);                                        // head
+    g.fillStyle(0xe0b28c,1); g.fillRect(cx+2,6,3,11);
+    g.fillStyle(0x3a2a1a,1); g.fillRect(cx-5,4,10,5);                                         // hair
+    if(dir==="up"){ g.fillStyle(0x2c2014,1); g.fillRect(cx-5,4,10,12); }                      // back of head
+    else if(dir==="right"){ g.fillRect(cx-5,4,9,7); }
+    g.fillStyle(0x181a2e,1);
+    if(dir==="down"){ g.fillRect(cx-3,11,2,2); g.fillRect(cx+1,11,2,2); }
+    else if(dir==="right"){ g.fillRect(cx+1,11,2,2); }
+}
+
+/* ====================================================================== */
+/*  WORLD SCENE                                                            */
+/* ====================================================================== */
+class WorldScene extends Phaser.Scene {
+    constructor(){ super("World"); }
+    create(){
+        worldScene=this; this.entities=[]; this._dirty=true; this._lastDir=null; this._promptKey=null;
+        // skill: object pool — wandering villagers are recycled (not destroyed) across regenerations.
+        // (manual sprite pool: Phaser Group.get mis-resolves frames for runtime-generated textures)
+        this.npcPool=[]; this.villagers=[]; this.occupied=new Set(); this.questAt=new Map();
+        this.questSpark=this.add.particles(0,0,"spark",{ lifespan:650, speed:{min:40,max:150}, scale:{start:1,end:0}, alpha:{start:1,end:0}, gravityY:220, tint:[0xfcbc05,0xffffff,0x84fe58], quantity:1, maxParticles:60, emitting:false }).setDepth(1e6);
+        this.dust=this.add.particles(0,0,"soft",{ lifespan:320, speed:{min:8,max:30}, angle:{min:200,max:340}, scale:{start:0.5,end:0}, alpha:{start:0.45,end:0}, quantity:1, maxParticles:TUNE.maxDust, emitting:false }).setDepth(1e6);
+        this.confetti=this.add.particles(0,0,"confetti",{ lifespan:1700, speedX:{min:-120,max:120}, speedY:{min:-260,max:-120}, gravityY:380, scale:{start:1.1,end:0.6}, rotate:{min:0,max:360}, tint:[0x7c3aed,0xd6256b,0x1470e8,0x206d00,0xfcbc05], quantity:1, maxParticles:TUNE.maxConfetti, emitting:false }).setScrollFactor(0).setDepth(1e6+1);
+
+        this.buildWorld();
+        this.cursors=this.input.keyboard.createCursorKeys();
+        this.wasd=this.input.keyboard.addKeys({up:"W",down:"S",left:"A",right:"D"});
+        this.input.keyboard.addCapture("UP,DOWN,LEFT,RIGHT,SPACE,ENTER");
+        ["SPACE","ENTER"].forEach(k=> this.input.keyboard.on("keydown-"+k, ()=>this.handleAction()));
+        this.events.on("resume", ()=>{ this.refreshStars(); refreshHud();
+            if(this._pendingQuest && this.registry.get("questDone")){ this.collectQuest(this._pendingQuest); this.registry.set("questDone",false); }
+            this._pendingQuest=null; this._promptKey=null; checkVictory(); });
+        // skill: clean up scene-owned objects/listeners on shutdown
+        this.events.once("shutdown", this.cleanup, this);
+        this.time.delayedCall(450, ()=> showDialogue("Professeur Lumen","🧙",NPC_LINES));
+    }
+    cleanup(){ this.destroyWorld(); if(this.npcPool){ this.npcPool.forEach(v=>v&&v.destroy()); this.npcPool=null; } if(this.dust){ this.dust.destroy(); this.dust=null; } if(this.confetti){ this.confetti.destroy(); this.confetti=null; } if(this.questSpark){ this.questSpark.destroy(); this.questSpark=null; } }
+
+    buildWorld(){
+        this.destroyWorld();
+        const w=this.registry.get("world"); this.theme=THEMES[w.theme];
+        const gen=generateWorld(w.theme,w.seed);
+        this.grid=gen.grid; this.buildings=gen.buildings; this.footprint=gen.footprint;
+        this.cameras.main.setBackgroundColor(this.theme.ground[1]);
+        this.genBiomeTextures(this.theme);
+
+        // 1. baked ground/path/decor (single static layer)
+        const g=this.make.graphics({add:false});
+        for(let y=0;y<MH;y++) for(let x=0;x<MW;x++) drawGround(g, this.grid[y][x], x*TILE, y*TILE, x, y, this.theme);
+        const rt=this.add.renderTexture(0,0,MW*TILE,MH*TILE).setOrigin(0,0).setDepth(-1e6); rt.draw(g); g.destroy();
+        for(let y=0;y<MH;y++) for(let x=0;x<MW;x++) if(this.grid[y][x]==='P') rt.draw("cobble", x*TILE, y*TILE);   // blit cobblestone paths
+        this.entities.push(rt);
+
+        // 2. animated water + y-sorted obstacles
+        for(let y=0;y<MH;y++) for(let x=0;x<MW;x++){
+            const c=this.grid[y][x];
+            if(c==='W'){ const s=this.add.sprite(x*TILE,y*TILE,"water0").setOrigin(0,0).setDepth(-9e5); s.play("water"); this.entities.push(s); }
+            else if(c==='T'){ const style=this.theme.obstacle[(x*3+y*5)%this.theme.obstacle.length];
+                const o=this.add.image(x*TILE+TILE/2, y*TILE+TILE, "obs_"+style).setOrigin(0.5,1).setDepth(y*TILE+TILE); this.entities.push(o); }
+        }
+
+        // 3. buildings, statue, npc (y-sorted)
+        const done=this.registry.get("done");
+        this.buildings.forEach(b=> b._obj=this.makeBuilding(b, done[b.game]));
+        this.makeStatue(); this.makeNPC();
+
+        // 4. player + wandering villagers (from the pool)
+        this.makePlayer();
+        this.spawnVillagers(7);
+        this.spawnQuests(3);
+
+        // 5. vignette (fixed to camera) + ambience
+        const vg=this.add.image(GAME_W/2,GAME_H/2,"vignette").setScrollFactor(0).setDisplaySize(GAME_W,GAME_H).setDepth(9e6); this.entities.push(vg);
+
+        // 6. camera
+        this.cameras.main.setBounds(0,0,MW*TILE,MH*TILE);
+        this.cameras.main.startFollow(this.player,true,0.16,0.16,0,-8);
+        this.cameras.main.setDeadzone(40,40); this.cameras.main.roundPixels=true;
+        this.cameras.main.fadeIn(TUNE.fadeIn,0,0,0);
+    }
+    destroyWorld(){
+        if(this.villagers){ this.villagers.forEach(v=>{ if(v){ v.setActive(false).setVisible(false); } }); } this.villagers=[];
+        if(this.occupied) this.occupied.clear();
+        if(this.questAt) this.questAt.clear();
+        if(this.entities) this.entities.forEach(e=>e&&e.destroy()); this.entities=[];
+        if(this.player){ this.player.destroy(); this.player=null; } if(this.pShadow){ this.pShadow.destroy(); this.pShadow=null; } }
+
+    isFreeForNPC(x,y){ return !this.isBlocked(x,y) && !this.occupied.has(x+","+y) && !(x===this.px&&y===this.py); }
+    getPooledVillager(key){
+        let v=this.npcPool.find(s=>!s.active);
+        if(!v){ if(this.npcPool.length>=16) return null; v=this.add.sprite(0,0,key).setOrigin(0.5,1); this.npcPool.push(v); }
+        v.setTexture(key).setActive(true).setVisible(true).setFlipX(false);
+        return v;
+    }
+    spawnVillagers(n){ let count=0, tries=0;
+        while(count<n && tries++<300){ const x=Phaser.Math.Between(1,MW-2), y=Phaser.Math.Between(1,MH-2);
+            if(!this.isFreeForNPC(x,y) || (Math.abs(x-SPAWN.x)+Math.abs(y-SPAWN.y))<3) continue;
+            const pi=Phaser.Math.Between(0,VPAL.length-1), key="vil"+pi+"_down_0";
+            const v=this.getPooledVillager(key); if(!v) break;
+            v.setPosition(x*TILE+TILE/2, y*TILE+TILE).setDepth(y*TILE+TILE);
+            v.pi=pi; v.tx=x; v.ty=y; v.dir="down"; v.wf=0; v.walkT=0; v.moving=false; v._dirty=false; v._lk=key; v._lf=false;
+            v.timer=Phaser.Math.Between(300,1500);
+            this.occupied.add(x+","+y); this.villagers.push(v); count++; }
+    }
+    updateVillagers(dt){ if(!this.villagers.length) return; const dirs=["up","down","left","right"];
+        for(const v of this.villagers){ if(!v.active) continue;
+            if(v.moving){ v.walkT+=dt; if(v.walkT>160){ v.walkT=0; v.wf^=1; v._dirty=true; } }
+            else { v.timer-=dt; if(v.timer<=0){ v.timer=Phaser.Math.Between(700,1900);
+                if(Math.random()<0.82){ const d=Phaser.Utils.Array.GetRandom(dirs), nx=v.tx+DIRS[d].x, ny=v.ty+DIRS[d].y;
+                    if(d!==v.dir){ v.dir=d; v._dirty=true; }
+                    if(this.isFreeForNPC(nx,ny)){ this.occupied.delete(v.tx+","+v.ty); this.occupied.add(nx+","+ny); v.tx=nx; v.ty=ny; v.moving=true;
+                        this.tweens.add({ targets:v, x:nx*TILE+TILE/2, y:ny*TILE+TILE, duration:230, ease:"Linear", onComplete:()=>{ v.moving=false; } }); } } } }
+            if(v._dirty){ const td=v.dir==="left"?"right":v.dir, flip=v.dir==="left", key="vil"+v.pi+"_"+td+"_"+v.wf;
+                if(key!==v._lk || flip!==v._lf){ v.setTexture(key).setFlipX(flip); v._lk=key; v._lf=flip; } v._dirty=false; }
+            v.setDepth(v.y);
+        }
+    }
+
+    // ---- Random bonus quests (treasure chests) ----
+    spawnQuests(n){ let count=0, tries=0;
+        while(count<n && tries++<200){ const x=Phaser.Math.Between(1,MW-2), y=Phaser.Math.Between(1,MH-2);
+            if(!this.isFreeForNPC(x,y) || (Math.abs(x-SPAWN.x)+Math.abs(y-SPAWN.y))<2) continue;
+            const px=x*TILE+TILE/2, py=y*TILE+TILE, cont=this.add.container(px,py).setDepth(py);
+            const glow=this.add.image(0,-9,"soft").setTint(0xfcbc05).setAlpha(0.5).setScale(2.2);
+            const chest=this.add.image(0,0,"chest").setOrigin(0.5,1);
+            const bang=this.add.text(0,-27,"❗",{fontSize:"13px"}).setOrigin(0.5);
+            cont.add([glow,chest,bang]); cont.qx=x; cont.qy=y;
+            this.tweens.add({ targets:cont, y:py-3, duration:900, yoyo:true, repeat:-1, ease:"Sine.inOut" });
+            this.tweens.add({ targets:glow, alpha:0.18, scaleX:1.5, scaleY:1.5, duration:700, yoyo:true, repeat:-1 });
+            this.questAt.set(x+","+y, cont); this.entities.push(cont); count++; }
+    }
+    openQuest(q){ this._pendingQuest=q; SFX.enter(); setControlsVisible(false); hidePrompt();
+        this.cameras.main.fadeOut(TUNE.fadeOut,0,0,0);
+        this.cameras.main.once("camerafadeoutcomplete", ()=>{ this.cameras.main.fadeIn(TUNE.fadeBack,0,0,0); this.scene.launch("MiniGame",{game:"quest"}); this.scene.pause(); }); }
+    collectQuest(q){ if(!q) return; this.questAt.delete(q.qx+","+q.qy);
+        this.questSpark.emitParticleAt(q.x, q.y-12, 22); SFX.good();
+        const i=this.entities.indexOf(q); if(i>=0) this.entities.splice(i,1);
+        this.tweens.add({ targets:q, scaleX:0, scaleY:0, alpha:0, duration:260, ease:"Back.in", onComplete:()=>q.destroy() }); }
+
+    genBiomeTextures(th){
+        // water frames + anim
+        ["water0","water1"].forEach(k=> this.textures.exists(k)&&this.textures.remove(k));
+        [0,1].forEach(f=>{ const g=this.make.graphics({add:false}); drawWaterTex(g,th,f); g.generateTexture("water"+f,TILE,TILE); g.destroy(); });
+        if(this.anims.exists("water")) this.anims.remove("water");
+        this.anims.create({key:"water",frames:[{key:"water0"},{key:"water1"}],frameRate:1.6,repeat:-1});
+        // obstacle styles
+        [...new Set(th.obstacle)].forEach(style=>{ const k="obs_"+style; if(this.textures.exists(k)) this.textures.remove(k);
+            const g=this.make.graphics({add:false}); const [w,h]=drawObstacleTex(g,style,th); g.generateTexture(k,w,h); g.destroy(); });
+    }
+
+    makeBuilding(b, cleared){
+        const accent=hx(VARK[b.game].accent), wall=hx(this.theme.wall), roof=hx(this.theme.roof);
+        const w=b.w*TILE, h=b.h*TILE, c=this.add.container(b.x*TILE,b.y*TILE).setDepth((b.y+b.h)*TILE);
+        const g=this.add.graphics();
+        g.fillStyle(0x000000,0.18); g.fillEllipse(w/2,h-2,w+10,14);                                  // ground shadow
+        g.fillStyle(wall,1); g.fillRect(0,8,w,h-8);                                                  // wall
+        g.fillStyle(Phaser.Display.Color.IntegerToColor(wall).darken(12).color,1); g.fillRect(0,h-8,w,8);
+        for(let i=10;i<w;i+=14){ g.fillStyle(0x000000,0.05); g.fillRect(i,10,1,h-18); }              // stone lines
+        // windows (warm light)
+        [w*0.22,w*0.62].forEach(wx=>{ g.fillStyle(0x2a2418,1); g.fillRect(wx-1,16,16,14); g.fillStyle(0xffe08a,1); g.fillRect(wx,17,14,12);
+            g.fillStyle(0x000000,0.35); g.fillRect(wx+6,17,2,12); g.fillRect(wx,22,14,2); });
+        // pitched roof (above the walls)
+        g.fillStyle(roof,1); g.beginPath(); g.moveTo(-7,10); g.lineTo(w/2,-24); g.lineTo(w+7,10); g.closePath(); g.fillPath();
+        g.fillStyle(Phaser.Display.Color.IntegerToColor(roof).darken(16).color,1); g.beginPath(); g.moveTo(w/2,-24); g.lineTo(w+7,10); g.lineTo(w/2,10); g.closePath(); g.fillPath();
+        g.fillStyle(accent,1); g.fillRect(-7,8,w+14,5);                                              // accent eave band
+        g.lineStyle(2,0x181a2e,0.6); g.strokeRect(0,8,w,h-8);
+        // door
+        const drx=(b.door.x-b.x)*TILE;
+        g.fillStyle(0x3a2a1a,1); g.fillRect(drx+8,h-22,TILE-16,22); g.fillStyle(accent,1); g.fillRect(drx+8,h-24,TILE-16,3);
+        g.fillStyle(0xfcbc05,1); g.fillRect(drx+TILE-12,h-12,2,2);
+        c.add(g);
+        c.add(this.add.text(w/2,-9, VARK[b.game].letter, {fontFamily:'"Space Mono",monospace',fontSize:"14px",color:"#ffffff",fontStyle:"bold"}).setOrigin(0.5));
+        const star=this.add.text(w/2,-34,"⭐",{fontSize:"18px"}).setOrigin(0.5).setVisible(!!cleared); c.add(star); b._star=star;
+        this.entities.push(c); return c;
+    }
+    makeStatue(){
+        const px=STATUE.x*TILE+TILE/2, py=STATUE.y*TILE+TILE;
+        const sh=this.add.image(px,py-2,"shadow").setDisplaySize(34,14).setAlpha(0.4).setDepth(py-1); this.entities.push(sh);
+        const g=this.add.graphics().setDepth(py);
+        g.fillStyle(0x9aa0ab,1); g.fillRect(px-12,py-16,24,16); g.fillStyle(0x7e848f,1); g.fillRect(px-12,py-6,24,6);
+        g.fillStyle(0xbfc4cd,1); g.fillRect(px-9,py-14,5,10); g.lineStyle(2,0x181a2e,0.5); g.strokeRect(px-12,py-16,24,16);
+        this.entities.push(g);
+        this.entities.push(this.add.text(px,py-22,"🦅",{fontSize:"22px"}).setOrigin(0.5).setDepth(py+1));
+    }
+    makeNPC(){
+        const px=NPC.x*TILE+TILE/2, py=NPC.y*TILE+TILE;
+        const sh=this.add.image(px,py-2,"shadow").setDisplaySize(28,12).setAlpha(0.4).setDepth(py-1); this.entities.push(sh);
+        const t=this.add.text(px,py-4,"🧙",{fontSize:"26px"}).setOrigin(0.5,1).setDepth(py); this.entities.push(t);
+        this.tweens.add({ targets:t, y:py-7, duration:1100, yoyo:true, repeat:-1, ease:"Sine.inOut" });
+    }
+    refreshStars(){ const done=this.registry.get("done"); this.buildings.forEach(b=> b._star&&b._star.setVisible(!!done[b.game])); }
+
+    makePlayer(){
+        this.px=SPAWN.x; this.py=SPAWN.y; this.dir="down"; this.moving=false; this.frame=0; this.walkT=0;
+        this.pShadow=this.add.image(this.px*TILE+TILE/2, this.py*TILE+TILE-2, "shadow").setDisplaySize(24,10).setAlpha(0.35);
+        this.player=this.add.sprite(this.px*TILE+TILE/2, this.py*TILE+TILE, "hero_down_0").setOrigin(0.5,1);
+    }
+
+    isBlocked(x,y){ if(x<0||y<0||x>=MW||y>=MH) return true; const c=this.grid[y][x];
+        if(c==='T'||c==='W') return true; if(this.footprint.has(x+","+y)) return true;
+        if(x===STATUE.x&&y===STATUE.y) return true; if(x===NPC.x&&y===NPC.y) return true;
+        if(this.questAt&&this.questAt.has(x+","+y)) return true; return false; }
+    facing(){ const d=DIRS[this.dir]; return { x:this.px+d.x, y:this.py+d.y }; }
+    heldDir(){ if(dialogueOpen) return null; const c=this.cursors,w=this.wasd;
+        if(c.up.isDown||w.up.isDown||pad.up) return "up"; if(c.down.isDown||w.down.isDown||pad.down) return "down";
+        if(c.left.isDown||w.left.isDown||pad.left) return "left"; if(c.right.isDown||w.right.isDown||pad.right) return "right"; return null; }
+    tryStep(dir){ if(this.dir!==dir){ this.dir=dir; this._dirty=true; } const nx=this.px+DIRS[dir].x, ny=this.py+DIRS[dir].y; if(this.isBlocked(nx,ny)) return;
+        this.moving=true; this.px=nx; this.py=ny; SFX.step();
+        this.tweens.add({ targets:[this.player,this.pShadow], x:nx*TILE+TILE/2, duration:TUNE.stepMs, ease:"Linear" });
+        this.tweens.add({ targets:this.player, y:ny*TILE+TILE, duration:TUNE.stepMs, ease:"Linear", onComplete:()=>{ this.moving=false; this.dust&&this.dust.emitParticleAt(this.player.x, this.player.y-2, TUNE.dustPerStep); } });
+        this.tweens.add({ targets:this.pShadow, y:ny*TILE+TILE-2, duration:TUNE.stepMs, ease:"Linear" });
+    }
+    handleAction(){ if(dialogueOpen){ advanceDialogue(); return; } if(this.scene.isPaused()) return;
+        const f=this.facing(); const b=this.buildings.find(b=> b.door.x===f.x&&b.door.y===f.y);
+        if(b){ this.openGame(b.game); return; }
+        const q=this.questAt.get(f.x+","+f.y); if(q){ this.openQuest(q); return; }
+        if(NPC.x===f.x&&NPC.y===f.y){ SFX.blip(); showDialogue("Professeur Lumen","🧙",NPC_LINES); return; }
+        if(STATUE.x===f.x&&STATUE.y===f.y){ SFX.blip(); showDialogue("Statue de l'Empereur","🦅",["« Vive l'Empereur ! » L'aigle de bronze veille sur la place."]); } }
+    openGame(game){ SFX.enter(); setControlsVisible(false); hidePrompt(); this.cameras.main.fadeOut(TUNE.fadeOut,0,0,0);
+        this.cameras.main.once("camerafadeoutcomplete", ()=>{ this.cameras.main.fadeIn(TUNE.fadeBack,0,0,0); this.scene.launch("MiniGame",{game}); this.scene.pause(); }); }
+
+    // skill: throttle expensive work — only rebuild the prompt when the faced tile changes
+    updatePrompt(){ const f=this.facing(); const key=dialogueOpen?"d":(f.x+","+f.y); if(key===this._promptKey) return; this._promptKey=key;
+        if(dialogueOpen){ hidePrompt(); return; } const done=this.registry.get("done");
+        const b=this.buildings.find(b=> b.door.x===f.x&&b.door.y===f.y);
+        if(b) setPrompt((done[b.game]?"✔ ":"")+b.name+" — Entrer");
+        else if(this.questAt.get(f.x+","+f.y)) setPrompt("🎁 Quête bonus — Ouvrir");
+        else if(NPC.x===f.x&&NPC.y===f.y) setPrompt("Parler au Professeur");
+        else if(STATUE.x===f.x&&STATUE.y===f.y) setPrompt("Observer la statue"); else hidePrompt(); }
+
+    regenerate(themeKey,seed){ this.registry.set("world",{theme:themeKey,seed:seed>>>0}); saveState(); this.buildWorld(); hideDialogue(); }
+
+    update(_,dt){
+        if(this.scene.isPaused()) return;
+        if(!this.moving){ const d=this.heldDir(); if(d) this.tryStep(d); }
+        // walk-cycle (delta-based, framerate independent)
+        if(this.moving){ this.walkT+=dt; if(this.walkT>TUNE.walkFrameMs){ this.walkT=0; this.frame^=1; this._dirty=true; } }
+        else if(this.frame!==0){ this.frame=0; this._dirty=true; }
+        // skill: don't rebuild texture strings every frame — only when frame/dir changed
+        if(this._dirty || this._lastDir!==this.dir){ const tdir=this.dir==="left"?"right":this.dir;
+            this.player.setTexture("hero_"+tdir+"_"+this.frame).setFlipX(this.dir==="left"); this._lastDir=this.dir; this._dirty=false; }
+        // depth must track y every frame (changes during the move tween)
+        this.player.setDepth(this.player.y); this.pShadow.setDepth(this.player.y-1);
+        this.updateVillagers(dt);
+        this.updatePrompt();
+    }
+}
+
+/* ====================================================================== */
+/*  MINIGAME SCENE                                                         */
+/* ====================================================================== */
+class MiniGameScene extends Phaser.Scene {
+    constructor(){ super("MiniGame"); }
+    init(data){ this.game_=data.game; this.isQuest=(data.game==="quest");
+        this.v=this.isQuest ? {letter:"?",label:"Quête Bonus",accent:"#b8860b",title:"Trésor du Savoir",maxXP:15} : VARK[data.game];
+        this.checked=false; }
+    create(){
+        const W=GAME_W,H=GAME_H;
+        this.add.rectangle(W/2,H/2,W,H,0x181a2e,0.72).setInteractive();
+        this.panel=this.add.rectangle(W/2,H/2,W-24,H-40,0xfbf8ff).setStrokeStyle(4,0x181a2e);
+        this.PX=12; this.PW=W-24; this.PT=20; this.PB=H-20;
+        this.add.text(this.PX+14,this.PT+14,this.v.letter+" · "+this.v.label,{fontFamily:'"Space Grotesk"',fontSize:"12px",color:this.v.accent,fontStyle:"bold"}).setOrigin(0,0);
+        this.add.text(this.PX+14,this.PT+30,this.v.title,{fontFamily:'"Space Grotesk"',fontSize:"20px",color:"#181a2e",fontStyle:"bold"}).setOrigin(0,0);
+        this.progress=this.add.text(this.PX+this.PW-44,this.PT+34,"",{fontFamily:'"Space Grotesk"',fontSize:"12px",color:"#414754"}).setOrigin(1,0);
+        this.makeBtn(this.PX+this.PW-22,this.PT+22,26,26,"✕",0xfbf8ff,"#181a2e",()=>this.close());
+        this.add.line(0,0,this.PX,this.PT+66,this.PX+this.PW,this.PT+66,0x181a2e).setOrigin(0,0).setLineWidth(2);
+        this.spark=this.add.particles(0,0,"spark",{ lifespan:600, speed:{min:50,max:160}, scale:{start:0.9,end:0}, alpha:{start:1,end:0}, gravityY:240, tint:[0xfcbc05,0x84fe58,0xffffff], quantity:1, maxParticles:TUNE.maxSpark, emitting:false }).setDepth(100);
+        this.content=this.add.container(0,0);
+        if(this.isQuest) this.startMCQ([Phaser.Utils.Array.GetRandom(QUEST_Q)],false);
+        else if(this.game_==="visuel") this.startMCQ(VISUEL_Q,false);
+        else if(this.game_==="auditif") this.startMCQ(AUDITIF_Q,true);
+        else if(this.game_==="lire") this.startMCQ(LIRE_Q,false,true);
+        else if(this.game_==="kinesthesique") this.startTimeline();
+    }
+    clearContent(){ this.content.removeAll(true); }
+    makeBtn(x,y,w,h,label,bg,fg,cb,fontSize){
+        const r=this.add.rectangle(x,y,w,h,bg).setStrokeStyle(2,0x181a2e).setInteractive({useHandCursor:true});
+        const t=this.add.text(x,y,label,{fontFamily:'"Space Grotesk"',fontSize:(fontSize||"14px"),color:fg,fontStyle:"bold"}).setOrigin(0.5); r.txt=t;
+        r.on("pointerover",()=>r.setFillStyle(Phaser.Display.Color.IntegerToColor(bg).darken(6).color));
+        r.on("pointerout",()=>r.setFillStyle(bg)); r.on("pointerdown",()=>{ SFX.click(); cb(r,t); }); return r;
+    }
+    startMCQ(qs,audio,isText){ this.qs=qs; this.audio=audio; this.isText=isText; this.idx=0; this.correct=0; this.locked=false; this.renderQ(); }
+    renderQ(){ this.clearContent(); this.locked=false; const q=this.qs[this.idx], cx=GAME_W/2; let y=this.PT+96;
+        this.progress.setText("Q "+(this.idx+1)+" / "+this.qs.length);
+        if(this.audio){ this.content.add(this.add.text(cx,y,"🔊",{fontSize:"46px"}).setOrigin(0.5)); y+=46;
+            const play=this.makeBtn(cx,y+8,170,40,"▶  ÉCOUTER",hx(this.v.accent),"#ffffff",()=>speak(q.speak),"16px"); play.txt.setColor("#ffffff"); this.content.add(play); this.content.add(play.txt); y+=44;
+            this.content.add(this.add.text(cx,y,"Réécoute autant que tu veux",{fontFamily:'"Space Grotesk"',fontSize:"11px",color:"#414754"}).setOrigin(0.5)); y+=24; this.time.delayedCall(250,()=>speak(q.speak)); }
+        else if(!this.isText){ this.content.add(this.add.text(cx,y,q.emoji,{fontSize:"50px"}).setOrigin(0.5)); y+=58; }
+        const prompt=this.isText?q.text:(q.q||"Quelle est la bonne réponse ?");
+        const qt=this.add.text(cx,y,prompt,{fontFamily:'"Space Grotesk"',fontSize:"16px",color:"#181a2e",fontStyle:"bold",align:"center",wordWrap:{width:this.PW-50}}).setOrigin(0.5,0);
+        this.content.add(qt); y+=qt.height+16; this.optRects=[];
+        q.options.forEach((opt,i)=>{ const r=this.add.rectangle(cx,y+16,this.PW-50,38,0xfbf8ff).setStrokeStyle(2,0x181a2e).setInteractive({useHandCursor:true});
+            const t=this.add.text(this.PX+34,y+16,opt,{fontFamily:'"Plus Jakarta Sans"',fontSize:"14px",color:"#181a2e",wordWrap:{width:this.PW-80}}).setOrigin(0,0.5);
+            r.on("pointerover",()=>{ if(!this.locked) r.setFillStyle(0xedecff); }); r.on("pointerout",()=>{ if(!this.locked) r.setFillStyle(0xfbf8ff); });
+            r.on("pointerdown",()=>this.choose(i,r)); this.content.add(r); this.content.add(t); this.optRects.push(r); y+=46; });
+    }
+    choose(i,rect){ if(this.locked) return; this.locked=true; const ans=this.qs[this.idx].answer;
+        if(i===ans){ this.correct++; rect.setFillStyle(0x84fe58); SFX.good(); this.spark.emitParticleAt(rect.x,rect.y,TUNE.sparkBurst); this.cameras.main.flash(150,132,254,88); toast("Bonne réponse !",true); }
+        else { rect.setFillStyle(0xffdad6); this.optRects[ans].setFillStyle(0x84fe58); SFX.bad(); this.cameras.main.shake(180,0.006); toast("Raté…",false); }
+        if(this.audio) window.speechSynthesis&&window.speechSynthesis.cancel();
+        this.time.delayedCall(1150,()=>{ this.idx++; if(this.idx<this.qs.length) this.renderQ(); else this.finish(this.correct,this.qs.length); });
+    }
+    startTimeline(){ this.clearContent(); this.progress.setText("Glisser-déposer"); const cx=GAME_W/2;
+        this.content.add(this.add.text(cx,this.PT+86,"Remets les 7 événements dans l'ordre\nchronologique (du plus ancien en haut).",{fontFamily:'"Space Grotesk"',fontSize:"13px",color:"#414754",align:"center"}).setOrigin(0.5,0));
+        this.tlStartY=this.PT+136; this.tlSpacing=42; this.tlW=this.PW-44;
+        const base=TIMELINE.map((t,i)=>({...t,k:i})); const order=Phaser.Utils.Array.Shuffle(base.slice()); if(order.every((o,i)=>o.k===i)) order.reverse();
+        this.cards=[];
+        order.forEach((item,i)=>{ const c=this.add.container(cx,this.tlStartY+i*this.tlSpacing);
+            const r=this.add.rectangle(0,0,this.tlW,36,0xfbf8ff).setStrokeStyle(2,0x181a2e);
+            const ico=this.add.text(-this.tlW/2+16,0,item.emoji,{fontSize:"22px"}).setOrigin(0.5);
+            const lbl=this.add.text(-this.tlW/2+40,0,item.label,{fontFamily:'"Plus Jakarta Sans"',fontSize:"13px",color:"#181a2e",fontStyle:"bold"}).setOrigin(0,0.5);
+            const yr=this.add.text(this.tlW/2-16,0,"",{fontFamily:'"Space Mono"',fontSize:"13px",color:"#414754"}).setOrigin(1,0.5);
+            const grip=this.add.text(this.tlW/2-30,0,"⠿",{fontSize:"16px",color:"#727785"}).setOrigin(0.5);
+            c.add([r,ico,lbl,yr,grip]); c.item=item; c.yr=yr; c.bg=r; c.setSize(this.tlW,36).setInteractive({useHandCursor:true});
+            this.input.setDraggable(c); this.content.add(c); this.cards.push(c); });
+        this.input.on("dragstart",(p,obj)=>{ obj.setDepth(50); obj.bg.setFillStyle(0xe6e6ff); SFX.blip(); });
+        this.input.on("drag",(p,obj,dx,dy)=>{ obj.y=Phaser.Math.Clamp(dy,this.tlStartY-10,this.tlStartY+(this.cards.length-1)*this.tlSpacing+10);
+            const target=Phaser.Math.Clamp(Math.round((obj.y-this.tlStartY)/this.tlSpacing),0,this.cards.length-1); const cur=this.cards.indexOf(obj);
+            if(target!==cur){ this.cards.splice(cur,1); this.cards.splice(target,0,obj); this.layoutCards(obj); } });
+        this.input.on("dragend",(p,obj)=>{ obj.setDepth(0); obj.bg.setFillStyle(0xfbf8ff); this.layoutCards(null); });
+        this.tlFeedback=this.add.text(cx,this.tlStartY+this.cards.length*this.tlSpacing+6,"",{fontFamily:'"Plus Jakarta Sans"',fontSize:"13px",color:"#181a2e",fontStyle:"bold"}).setOrigin(0.5,0); this.content.add(this.tlFeedback);
+        const cb=this.makeBtn(cx,this.tlStartY+this.cards.length*this.tlSpacing+34,200,40,"✓  VÉRIFIER",hx(this.v.accent),"#ffffff",()=>this.checkTimeline(),"15px"); cb.txt.setColor("#ffffff"); this.content.add(cb); this.content.add(cb.txt);
+    }
+    layoutCards(except){ this.cards.forEach((c,i)=>{ if(c===except) return; this.tweens.add({targets:c,y:this.tlStartY+i*this.tlSpacing,duration:120}); }); }
+    checkTimeline(){ if(this.checked) return; this.checked=true; let correct=0; const rows=this.cards.slice();
+        this.cards.forEach((c,i)=>{ const ok=(c.item.year===TIMELINE[i].year); if(ok) correct++; c.bg.setFillStyle(ok?0x84fe58:0xffdad6); c.yr.setText(c.item.year); c.disableInteractive(); });
+        const all=correct===TIMELINE.length; this.tlFeedback.setText(all?"Chronologie parfaite !":correct+" / "+TIMELINE.length+" bien placés — années révélées.");
+        if(all){ SFX.good(); this.cameras.main.flash(150,132,254,88); } else { SFX.bad(); this.cameras.main.shake(160,0.005); }
+        toast(all?"Parfait !":correct+" / "+TIMELINE.length,all); this.time.delayedCall(2000,()=>this.finish(correct,TIMELINE.length));
+    }
+    finish(correct,total){
+        if(this.isQuest){ const earned=correct>0?15:0; this.registry.set("xp",this.registry.get("xp")+earned); this.registry.set("questDone",true); saveState();
+            this.clearContent(); this.progress.setText(""); const cx=GAME_W/2; this.spark.emitParticleAt(cx,this.PT+130,24);
+            this.content.add(this.add.text(cx,this.PT+130, correct>0?"💰":"📜",{fontSize:"56px"}).setOrigin(0.5));
+            this.content.add(this.add.text(cx,this.PT+188, correct>0?"Trésor du Savoir obtenu !":"Le coffre se referme…",{fontFamily:'"Space Grotesk"',fontSize:"18px",color:"#b8860b",fontStyle:"bold",align:"center",wordWrap:{width:this.PW-50}}).setOrigin(0.5));
+            this.content.add(this.add.text(cx,this.PT+226, correct>0?"+"+earned+" XP bonus":"Aucune récompense",{fontFamily:'"Space Mono"',fontSize:"20px",color:"#206d00",fontStyle:"bold"}).setOrigin(0.5));
+            const out=this.makeBtn(cx,this.PT+288,180,40,"Continuer",0xb8860b,"#ffffff",()=>this.close(),"15px"); out.txt.setColor("#ffffff"); this.content.add(out); this.content.add(out.txt); return; }
+        const v=this.v, earned=Math.round(correct/total*v.maxXP);
+        const scores=this.registry.get("scores"), done=this.registry.get("done"); let xp=this.registry.get("xp"); const prev=scores[this.game_]||0;
+        if(earned>prev){ xp+=earned-prev; scores[this.game_]=earned; } done[this.game_]=true;
+        this.registry.set("xp",xp); this.registry.set("scores",{...scores}); this.registry.set("done",{...done}); saveState();
+        this.clearContent(); this.progress.setText(""); const cx=GAME_W/2, star=correct===total?"🌟":(correct>=Math.ceil(total/2)?"✨":"📖");
+        this.spark.emitParticleAt(cx,this.PT+130,TUNE.sparkBurst+8);
+        this.content.add(this.add.text(cx,this.PT+130,star,{fontSize:"56px"}).setOrigin(0.5));
+        this.content.add(this.add.text(cx,this.PT+186,"Épreuve terminée",{fontFamily:'"Space Grotesk"',fontSize:"20px",color:v.accent,fontStyle:"bold"}).setOrigin(0.5));
+        this.content.add(this.add.text(cx,this.PT+216,"Bonnes réponses : "+correct+" / "+total,{fontFamily:'"Space Mono"',fontSize:"15px",color:"#181a2e"}).setOrigin(0.5));
+        this.content.add(this.add.text(cx,this.PT+256,"+"+earned+" XP",{fontFamily:'"Space Mono"',fontSize:"26px",color:"#206d00",fontStyle:"bold"}).setOrigin(0.5));
+        const retry=this.makeBtn(cx-86,this.PT+316,150,40,"↻  Rejouer",0xfbf8ff,"#181a2e",()=>this.scene.restart({game:this.game_}),"14px"); this.content.add(retry); this.content.add(retry.txt);
+        const out=this.makeBtn(cx+86,this.PT+316,150,40,"Sortir",hx(v.accent),"#ffffff",()=>this.close(),"14px"); out.txt.setColor("#ffffff"); this.content.add(out); this.content.add(out.txt);
+    }
+    close(){ if(window.speechSynthesis) window.speechSynthesis.cancel(); setControlsVisible(true);
+        const world=this.scene.get("World"); this.scene.resume("World"); this.scene.stop(); world.refreshStars(); refreshHud(); checkVictory(); }
+}
+
+/* ====================================================================== */
+/*  Texture painters                                                      */
+/* ====================================================================== */
+function drawGround(g,c,sx,sy,gx,gy,th){
+    if(c==='P') return;                                               // cobblestone blitted separately
+    g.fillStyle(hx(th.ground[0]),1); g.fillRect(sx,sy,TILE,TILE);
+    // grass dither + tufts (two extra greens)
+    g.fillStyle(hx(th.ground[1]),1);
+    for(let i=0;i<6;i++){ const px=(gx*13+i*7+gy*3)%TILE, py=(gy*11+i*5+gx*7)%TILE; if((px+py)%5<2) g.fillRect(sx+px,sy+py,3,3); }
+    g.fillStyle(hx(th.ground[2]||th.ground[0]),0.7);
+    for(let i=0;i<3;i++){ const px=(gx*5+i*9)%TILE, py=(gy*7+i*11)%TILE; g.fillRect(sx+px,sy+py,2,2); }
+    if(c==='t') drawDecorTex(g,sx,sy,th);
+}
+function drawDecorTex(g,sx,sy,th){
+    if(th.decor==='snow'){ g.fillStyle(0xeef3f7,1); g.fillRect(sx+6,sy+16,20,8); g.fillStyle(0xdfe7ee,1); g.fillRect(sx+10,sy+20,12,4); return; }
+    if(th.decor==='rock'){ g.fillStyle(0x7e7268,1); g.fillRect(sx+8,sy+18,7,5); g.fillRect(sx+18,sy+20,5,4); return; }
+    g.fillStyle(hx(th.decorColor),1); for(let i=0;i<4;i++){ g.fillRect(sx+4+i*7,sy+14,3,12); g.fillRect(sx+7+i*7,sy+18,3,8); }
+    if(th.decor==='flower'){ g.fillStyle(0xff6ba3,1); g.fillRect(sx+8,sy+12,3,3); g.fillStyle(0xffd54a,1); g.fillRect(sx+20,sy+13,3,3); }
+}
+function drawWaterTex(g,th,frame){
+    g.fillStyle(hx(th.water),1); g.fillRect(0,0,TILE,TILE);
+    g.fillStyle(Phaser.Display.Color.IntegerToColor(hx(th.water)).darken(12).color,1); g.fillRect(0,TILE-6,TILE,6);
+    const o=frame?6:0; g.fillStyle(hx(th.waterHi),0.85);
+    g.fillRect((4+o)%TILE,8,10,2); g.fillRect((18+o)%TILE,18,8,2); g.fillRect((10+o)%TILE,26,6,2);
+    g.fillStyle(0xffffff,0.22); g.fillRect((2+o)%TILE,4,5,1);
+}
+function drawObstacleTex(g,style,th){
+    const shade=(x,y,w,h)=>{ g.fillStyle(0x000000,0.18); g.fillEllipse(x,y,w,h); };
+    if(style==='rock'){ const W=32,H=28,cx=16; shade(cx,H-3,26,8);
+        g.fillStyle(0x9398a1,1); g.fillRect(4,8,24,17); g.fillStyle(0x767b85,1); g.fillRect(4,18,24,7);
+        g.fillStyle(0xb4b9c1,1); g.fillRect(8,10,8,6); g.lineStyle(2,0x181a2e,0.6); g.strokeRect(4,8,24,17); return [W,H]; }
+    if(style==='pine'){ const W=30,H=44,cx=15; shade(cx,H-3,22,8);
+        g.fillStyle(hx(th.trunk),1); g.fillRect(cx-2,H-12,4,12);
+        g.fillStyle(0x1f6f2e,1); g.beginPath(); g.moveTo(cx,4); g.lineTo(cx-13,H-12); g.lineTo(cx+13,H-12); g.closePath(); g.fillPath();
+        g.fillStyle(0x2f8f3a,1); g.beginPath(); g.moveTo(cx,4); g.lineTo(cx,H-12); g.lineTo(cx+13,H-12); g.closePath(); g.fillPath();
+        g.fillStyle(0x49ab57,0.7); g.beginPath(); g.moveTo(cx,6); g.lineTo(cx-6,20); g.lineTo(cx,20); g.closePath(); g.fillPath(); return [W,H]; }
+    if(style==='palm'){ const W=34,H=46,cx=17; shade(cx,H-3,22,8);
+        g.fillStyle(hx(th.trunk),1); g.fillRect(cx-2,H-26,4,26); g.fillStyle(Phaser.Display.Color.IntegerToColor(hx(th.trunk)).darken(15).color,1); g.fillRect(cx+1,H-26,2,26);
+        g.fillStyle(0x1f9a3e,1); [[-15,-2],[3,-2],[-13,-8],[5,-8]].forEach(([dx,dy])=>g.fillRect(cx+dx,H-26+dy,14,5));
+        g.fillStyle(0x147a2e,1); g.fillRect(cx-3,H-30,6,6); g.fillStyle(0xc7a14a,1); g.fillRect(cx-4,H-24,8,4); return [W,H]; }
+    if(style==='cactus'){ const W=30,H=40,cx=15; shade(cx,H-3,18,7);
+        g.fillStyle(0x2f9e57,1); g.fillRect(cx-4,8,8,H-8); g.fillRect(cx-11,18,7,5); g.fillRect(cx-11,12,5,11); g.fillRect(cx+4,22,7,5); g.fillRect(cx+6,15,5,12);
+        g.fillStyle(0x247c44,1); g.fillRect(cx+1,10,3,H-10); g.lineStyle(2,0x181a2e,0.5); g.strokeRect(cx-4,8,8,H-8);
+        g.fillStyle(0xff5e87,1); g.fillRect(cx-2,6,4,3); return [W,H]; }
+    // tree
+    const W=32,H=40,cx=16; shade(cx,H-3,24,8);
+    g.fillStyle(hx(th.trunk),1); g.fillRect(cx-3,H-14,6,14); g.fillStyle(Phaser.Display.Color.IntegerToColor(hx(th.trunk)).darken(15).color,1); g.fillRect(cx+1,H-14,2,14);
+    g.fillStyle(0x247a30,1); g.fillEllipse(cx,16,28,26); g.fillStyle(0x2f8f3a,1); g.fillEllipse(cx,13,24,20);
+    g.fillStyle(0x46b056,1); g.fillEllipse(cx-4,10,12,10); g.fillStyle(0x66c46f,0.7); g.fillEllipse(cx-6,8,6,5);
+    return [W,H];
+}
+
+/* ====================================================================== */
+/*  HTML <-> Phaser bridge & UI glue                                      */
+/* ====================================================================== */
+let game=null, worldScene=null;
+const pad={up:false,down:false,left:false,right:false};
+let dialogueOpen=false, dlgLines=[], dlgIndex=0;
+const $=id=>document.getElementById(id);
+
+function saveState(){ if(!game) return; const r=game.registry;
+    try{ localStorage.setItem(KEY,JSON.stringify({xp:r.get("xp"),scores:r.get("scores"),done:r.get("done"),world:r.get("world")})); }catch(e){} }
+function refreshHud(){ if(!game) return; const r=game.registry, totalMax=Object.values(VARK).reduce((a,v)=>a+v.maxXP,0);
+    const xp=r.get("xp")||0, done=r.get("done")||{}; $("hud-xp").textContent=xp; $("hud-level").textContent=1+Math.floor(xp/40);
+    $("xpfill").style.width=Math.min(100,Math.round(xp/totalMax*100))+"%"; $("hud-badges").textContent="🏰 "+Object.values(done).filter(Boolean).length+"/4"; }
+function checkVictory(){ if(!game) return; const done=game.registry.get("done");
+    if(Object.values(done).every(Boolean)){ SFX.win(); if(worldScene&&worldScene.confetti){ for(let i=0;i<TUNE.confettiBurst;i++) worldScene.confetti.emitParticleAt(Phaser.Math.Between(40,GAME_W-40),-10); }
+        $("victory-xp").textContent=game.registry.get("xp"); $("victory").classList.add("show"); } }
+
+function showDialogue(name,emoji,lines){ dlgLines=lines; dlgIndex=0; dialogueOpen=true; $("dlg-name").textContent=name; $("dlg-avatar").textContent=emoji; $("dlg-text").textContent=lines[0]; $("dialogue").classList.add("show"); }
+function advanceDialogue(){ SFX.blip(); dlgIndex++; if(dlgIndex<dlgLines.length) $("dlg-text").textContent=dlgLines[dlgIndex]; else hideDialogue(); }
+function hideDialogue(){ dialogueOpen=false; $("dialogue").classList.remove("show"); }
+function setPrompt(t){ $("prompt-text").textContent=t; $("prompt").classList.add("show"); }
+function hidePrompt(){ $("prompt").classList.remove("show"); }
+function setControlsVisible(v){ $("controls").style.display=v?"flex":"none"; }
+let toastTimer; function toast(msg,ok=true){ const t=$("toast"),inner=$("toast-inner");
+    inner.innerHTML='<span class="material-symbols-outlined" style="font-size:18px;">'+(ok?"check_circle":"cancel")+'</span>'+msg;
+    inner.style.background=ok?"#84fe58":"#ffdad6"; inner.style.color=ok?"#052100":"#93000a"; t.style.display="block"; clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.style.display="none",1500); }
+function speak(text){ if(!("speechSynthesis" in window)){ toast("Synthèse vocale indisponible",false); return; } window.speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text); u.lang="fr-FR"; u.rate=.95; const fr=window.speechSynthesis.getVoices().find(v=>/fr/i.test(v.lang)); if(fr) u.voice=fr; window.speechSynthesis.speak(u); }
+if("speechSynthesis" in window){ window.speechSynthesis.onvoiceschanged=()=>{}; window.speechSynthesis.getVoices(); }
+
+function randSeed(){ return ((Date.now()>>>0)^Math.floor(Math.random()*0xffffffff))>>>0; }
+function buildThemeGrid(){ const grid=$("theme-grid"); grid.innerHTML=""; const cur=game.registry.get("world").theme;
+    Object.entries(THEMES).forEach(([key,th])=>{ const b=document.createElement("div"); b.className="theme-card"; if(key===cur) b.style.background=th.ground[0];
+        b.innerHTML='<span class="emoji">'+th.emoji+'</span><span class="nm">'+th.name+(key===cur?'<br><span style="font-weight:600;font-size:11px;color:#414754;">actuel</span>':'')+'</span>';
+        b.onclick=()=>{ SFX.click(); worldScene.regenerate(key,randSeed()); afterGenerate(); }; grid.appendChild(b); }); }
+function updateWorldLabels(){ const w=game.registry.get("world"),th=THEMES[w.theme]; $("cur-world").textContent=th.emoji+" "+th.name; $("cur-seed").textContent=w.seed; }
+function afterGenerate(){ updateWorldLabels(); buildThemeGrid(); refreshHud(); toast("Monde : "+THEMES[game.registry.get("world").theme].name,true); $("world-modal").classList.remove("show"); }
+
+function wireUI(){
+    document.querySelectorAll("#dpad button").forEach(btn=>{ const dir=btn.dataset.dir;
+        const on=e=>{ e.preventDefault(); pad[dir]=true; }, off=e=>{ e.preventDefault(); pad[dir]=false; };
+        btn.addEventListener("touchstart",on,{passive:false}); btn.addEventListener("touchend",off,{passive:false}); btn.addEventListener("touchcancel",off,{passive:false});
+        btn.addEventListener("mousedown",on); btn.addEventListener("mouseup",off); btn.addEventListener("mouseleave",off); });
+    const A=$("btnA"); const act=e=>{ e.preventDefault(); worldScene&&worldScene.handleAction(); };
+    A.addEventListener("touchstart",act,{passive:false}); A.addEventListener("mousedown",act);
+    $("btn-world").onclick=()=>{ SFX.click(); buildThemeGrid(); updateWorldLabels(); $("world-modal").classList.add("show"); };
+    $("btn-world-close").onclick=()=>{ SFX.click(); $("world-modal").classList.remove("show"); };
+    $("btn-random").onclick=()=>{ const k=Object.keys(THEMES)[Math.floor(Math.random()*6)]; worldScene.regenerate(k,randSeed()); afterGenerate(); };
+    $("btn-regen").onclick=()=>{ worldScene.regenerate(game.registry.get("world").theme,randSeed()); afterGenerate(); };
+    $("btn-sound-toggle").onclick=()=>{ const m=SFX.toggle(); $("btn-sound-toggle").querySelector("span").textContent=m?"volume_off":"volume_up"; if(!m) SFX.click(); };
+    $("btn-help").onclick=()=>{ SFX.blip(); showDialogue("Aide","🗺️",["Flèches / WASD ou la croix tactile pour te déplacer.","A · Entrée · Espace : parler et entrer dans les bâtiments.","Bouton 🌍 : générer un nouveau monde (6 biomes). Bonne quête !"]); };
+    $("btn-victory-close").onclick=()=>{ SFX.click(); $("victory").classList.remove("show"); };
+    const wake=()=>SFX.resume(); window.addEventListener("pointerdown",wake); window.addEventListener("keydown",wake);
+}
+
+window.addEventListener("load", ()=>{
+    wireUI();
+    game=new Phaser.Game({
+        type:Phaser.AUTO, parent:"game", backgroundColor:"#1b1d2e", pixelArt:true, roundPixels:true,
+        scale:{ mode:Phaser.Scale.FIT, autoCenter:Phaser.Scale.CENTER_BOTH, width:GAME_W, height:GAME_H },
+        scene:[ BootScene, WorldScene, MiniGameScene ],
+    });
+});
+</script>
+</body></html>
